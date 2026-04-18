@@ -1,0 +1,8 @@
+[package]
+name = "sim_broadband_gui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+zbus = { version = "3", features = ["tokio"] }
+tokio = { version = "1", features = ["full"] }
