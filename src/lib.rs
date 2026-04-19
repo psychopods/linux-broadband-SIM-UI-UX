@@ -1326,10 +1326,37 @@ pub async fn cancel_ussd() -> Result<(), String> {
     let context = connect_to_modem().await?;
     let proxy = modem_ussd_proxy(&context).await?;
 
-    proxy
+    let state: u32 = proxy.get_property("State").await.unwrap_or_default();
+    // MMModem3gppUssdSessionState: Unknown(0), Idle(1), Active(2), UserResponse(3)
+    // If already idle/unknown, cancellation is effectively complete.
+    if state <= 1 {
+        return Ok(());
+    }
+
+    match proxy
         .call::<_, _, ()>("Cancel", &())
         .await
-        .map_err(|e| format!("Failed to cancel USSD session: {e}"))
+    {
+        Ok(()) => Ok(()),
+        Err(error) => {
+            let message = error.to_string();
+            if is_benign_ussd_cancel_error(&message) {
+                Ok(())
+            } else {
+                Err(format!("Failed to cancel USSD session: {message}"))
+            }
+        }
+    }
+}
+
+fn is_benign_ussd_cancel_error(message: &str) -> bool {
+    let normalized = message.to_lowercase();
+
+    normalized.contains("phonefailure")
+        || normalized.contains("mbim status error: failure")
+        || normalized.contains("no active")
+        || normalized.contains("unknown session")
+        || normalized.contains("not active")
 }
 
 // TODO: Add operator and scan tools: current operator code/name, network scan
