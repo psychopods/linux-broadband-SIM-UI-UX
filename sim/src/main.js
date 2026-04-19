@@ -2,6 +2,7 @@ import {
   setTopbarLoading,
 } from "./components/topbar/topbar.js";
 import { initSidebar } from "./components/sidebar/sidebar.js";
+import { initNetworkPanel } from "./components/network/network.js";
 import { initSMS } from "./components/sms/sms.js";
 import { startModemPolling } from "./tauri-api.js";
 
@@ -31,11 +32,13 @@ async function initializeApp() {
   await Promise.all([
     loadComponent("./components/topbar/topbar.html", "topbar-mount"),
     loadComponent("./components/sidebar/sidebar.html", "sidebar-mount"),
+    loadComponent("./components/network/network.html", "network-mount"),
     loadComponent("./components/sms/sms.html", "sms-mount"),
   ]);
 
   // Initialize components
   initSidebar();
+  initNetworkPanel();
   initSMS();
 
   // Render immediately with an honest loading state, then hydrate from backend.

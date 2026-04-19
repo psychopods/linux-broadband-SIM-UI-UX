@@ -1,0 +1,72 @@
+<section id="network-tab" class="network-panel" style="display: none;">
+  <div class="network-panel-header">
+    <div>
+      <p class="network-eyebrow">Modem Control</p>
+      <h2>Network</h2>
+    </div>
+    <div class="network-header-status" id="network-connected-pill">Loading</div>
+  </div>
+
+  <div class="network-grid">
+    <article class="network-card network-card-primary">
+      <div class="network-card-header">
+        <div>
+          <p class="network-card-label">Session</p>
+          <h3>Connection Controls</h3>
+        </div>
+      </div>
+
+      <label class="network-field">
+        <span>APN</span>
+        <input id="network-apn-input" type="text" placeholder="internet" autocomplete="off" />
+      </label>
+
+      <div class="network-actions">
+        <button id="network-connect-btn" class="network-btn network-btn-primary" type="button">
+          Connect
+        </button>
+        <button id="network-disconnect-btn" class="network-btn network-btn-secondary" type="button">
+          Disconnect
+        </button>
+      </div>
+
+      <p class="network-feedback" id="network-action-feedback">Ready</p>
+    </article>
+
+    <article class="network-card">
+      <p class="network-card-label">Status</p>
+      <div class="network-stat-list">
+        <div class="network-stat">
+          <span>Registration</span>
+          <strong id="network-registration-state">Loading</strong>
+        </div>
+        <div class="network-stat">
+          <span>Roaming</span>
+          <strong id="network-roaming-state">Loading</strong>
+        </div>
+        <div class="network-stat">
+          <span>Bearer</span>
+          <strong id="network-bearer-state">Loading</strong>
+        </div>
+      </div>
+    </article>
+
+    <article class="network-card">
+      <p class="network-card-label">Bearer Details</p>
+      <div class="network-stat-list">
+        <div class="network-stat">
+          <span>Interface</span>
+          <strong id="network-bearer-interface">--</strong>
+        </div>
+        <div class="network-stat">
+          <span>APN</span>
+          <strong id="network-bearer-apn">--</strong>
+        </div>
+        <div class="network-stat">
+          <span>Path</span>
+          <strong id="network-bearer-path">--</strong>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>

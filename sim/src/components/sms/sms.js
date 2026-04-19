@@ -19,6 +19,7 @@ function escapeHtml(text) {
 
 export function initSMS() {
   const smsTab = document.querySelector("#sms-tab");
+  const networkTab = document.querySelector("#network-tab");
   const contentShell = document.querySelector(".content-shell");
   const contactItems = document.querySelectorAll(".sms-contact-item");
   const messagesArea = document.querySelector("#sms-messages-area");
@@ -30,16 +31,25 @@ export function initSMS() {
   window.addEventListener("sidebar-item-click", (e) => {
     if (e.detail.label === "SMS") {
       if (smsTab) {
-        const isHidden = smsTab.style.display === "none";
-        smsTab.style.display = isHidden ? "flex" : "none";
+        smsTab.style.display = "flex";
+      }
 
-        if (contentShell) {
-          contentShell.style.overflow = isHidden ? "hidden" : "auto";
-          if (isHidden) {
-            contentShell.classList.add("sms-active");
-          } else {
-            contentShell.classList.remove("sms-active");
-          }
+      if (networkTab) {
+        networkTab.style.display = "none";
+      }
+
+      if (contentShell) {
+        contentShell.style.overflow = "hidden";
+        contentShell.classList.add("sms-active");
+        contentShell.classList.remove("network-active");
+      }
+    } else if (smsTab) {
+      smsTab.style.display = "none";
+
+      if (contentShell) {
+        contentShell.classList.remove("sms-active");
+        if (!contentShell.classList.contains("network-active")) {
+          contentShell.style.overflow = "auto";
         }
       }
     }

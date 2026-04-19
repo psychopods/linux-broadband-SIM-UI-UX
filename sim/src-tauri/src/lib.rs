@@ -1,4 +1,9 @@
-use sim_broadband_gui::{ModemData, get_all_modem_data, get_radio_tech, get_signal_strength, get_operator_name, get_connection_status, get_sim_info};
+use sim_broadband_gui::{
+    connect_network, disconnect_network, get_all_modem_data, get_connection_status,
+    get_current_bearer_details, get_network_controls, get_operator_name, get_radio_tech,
+    get_registration_state, get_roaming_state, get_signal_strength, get_sim_info, BearerDetails,
+    ModemData, NetworkControls,
+};
 
 // Tauri command to get all modem data
 #[tauri::command]
@@ -32,6 +37,36 @@ async fn get_sim() -> Result<String, String> {
     get_sim_info().await
 }
 
+#[tauri::command]
+async fn get_network_status() -> Result<NetworkControls, String> {
+    get_network_controls().await
+}
+
+#[tauri::command]
+async fn connect_modem(apn: Option<String>) -> Result<String, String> {
+    connect_network(apn).await
+}
+
+#[tauri::command]
+async fn disconnect_modem() -> Result<(), String> {
+    disconnect_network().await
+}
+
+#[tauri::command]
+async fn get_registration() -> Result<String, String> {
+    get_registration_state().await
+}
+
+#[tauri::command]
+async fn get_roaming() -> Result<bool, String> {
+    get_roaming_state().await
+}
+
+#[tauri::command]
+async fn get_current_bearer() -> Result<Option<BearerDetails>, String> {
+    get_current_bearer_details().await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -43,6 +78,12 @@ pub fn run() {
             get_operator,
             get_connection,
             get_sim,
+            get_network_status,
+            connect_modem,
+            disconnect_modem,
+            get_registration,
+            get_roaming,
+            get_current_bearer,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

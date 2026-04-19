@@ -90,6 +90,29 @@ export async function getSimInfo() {
 }
 
 /**
+ * Get network controls data
+ * @returns {Promise<{connected: boolean, registration_state: string, roaming: boolean, bearer: {path: string, connected: boolean, interface: string | null, apn: string | null} | null} | null>}
+ */
+export async function getNetworkControls() {
+  try {
+    return await getInvoke()("get_network_status");
+  } catch (error) {
+    console.error("Failed to get network controls:", error);
+    return null;
+  }
+}
+
+export async function connectModem(apn) {
+  return await getInvoke()("connect_modem", {
+    apn: typeof apn === "string" && apn.trim().length > 0 ? apn.trim() : null,
+  });
+}
+
+export async function disconnectModem() {
+  return await getInvoke()("disconnect_modem");
+}
+
+/**
  * Fetch and update all topbar widgets with real data
  * This is the main entry point for hydrating the UI with backend data
  */
@@ -97,12 +120,17 @@ export async function updateAllModemData() {
   const { setInternetStatus, setNetworkProvider, setNetworkSignal, setSimInfo, setTopbarUnavailable } = await import(
     "./components/topbar/topbar.js"
   );
+  const { renderNetworkControls, setNetworkPanelUnavailable } = await import(
+    "./components/network/network.js"
+  );
 
   try {
     const modemData = await getModemData();
+    const networkControls = await getNetworkControls();
 
     if (!modemData) {
       setTopbarUnavailable();
+      setNetworkPanelUnavailable();
       return;
     }
 
@@ -114,11 +142,13 @@ export async function updateAllModemData() {
     setNetworkProvider(modemData.operator_name);
     setNetworkSignal(modemData.signal_strength);
     setSimInfo(modemData.sim_info);
+    renderNetworkControls(networkControls);
 
-    console.log("Updated UI with real modem data:", modemData);
+    console.log("Updated UI with real modem data:", modemData, networkControls);
   } catch (error) {
     console.error("Failed to update modem data:", error);
     setTopbarUnavailable();
+    setNetworkPanelUnavailable();
   }
 }
 
