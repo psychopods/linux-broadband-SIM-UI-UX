@@ -9,31 +9,82 @@
   </head>
 
   <body>
-    <main class="container">
-      <h1>Welcome to Tauri</h1>
-
-      <div class="row">
-        <a href="https://tauri.app" target="_blank">
-          <img src="/assets/tauri.svg" class="logo tauri" alt="Tauri logo" />
-        </a>
-        <a
-          href="https://developer.mozilla.org/en-US/docs/Web/JavaScript"
-          target="_blank"
-        >
-          <img
-            src="/assets/javascript.svg"
-            class="logo vanilla"
-            alt="JavaScript logo"
-          />
-        </a>
+    <header class="topbar" aria-label="Top navigation">
+      <div class="topbar-brand">
+        <span class="brand-dot"></span>
+        <span class="brand-text">SIM Control</span>
       </div>
-      <p>Click on the Tauri logo to learn more about the framework</p>
 
-      <form class="row" id="greet-form">
-        <input id="greet-input" placeholder="Enter a name..." />
-        <button type="submit">Greet</button>
-      </form>
-      <p id="greet-msg"></p>
-    </main>
+      <nav class="topbar-items" aria-label="System status">
+        <button class="topbar-item" type="button" aria-label="Settings">
+          <img src="/assets/icons/settings.png" alt="Settings icon" />
+          <span>Settings</span>
+        </button>
+        <div
+          class="topbar-item topbar-item-status"
+          aria-label="Internet status"
+          id="internet-status-card"
+        >
+          <img src="/assets/icons/internet-status.png" alt="Internet status icon" />
+          <span class="status-meta">
+            <span class="status-label">Internet Status</span>
+            <span class="status-values">
+              <span class="pill pill-disconnected" id="internet-link-state">Disconnected</span>
+              <span class="pill pill-tech" id="internet-radio-tech">LTE</span>
+            </span>
+          </span>
+        </div>
+        <div
+          class="topbar-item topbar-item-provider"
+          aria-label="Network provider"
+          id="network-provider-card"
+        >
+          <img src="/assets/icons/network-provider.png" alt="Network provider icon" />
+          <span class="provider-meta">
+            <span class="provider-label">Network Provider</span>
+            <span class="provider-name" id="network-provider-name">No Network</span>
+          </span>
+        </div>
+        <div
+          class="topbar-item topbar-item-signal"
+          aria-label="Network signal"
+          id="network-signal-card"
+        >
+          <span class="signal-meta">
+            <span class="signal-label">Network Signal</span>
+            <span class="signal-values">
+              <img class="signal-level-icon" id="network-signal-icon" src="/assets/icons/signal-none.png" alt="Signal level" />
+              <span class="signal-strength" id="network-signal-strength">Low</span>
+              <span class="signal-db" id="network-signal-db">-105 dBm</span>
+            </span>
+          </span>
+        </div>
+      </nav>
+    </header>
+
+    <aside class="sidebar" aria-label="Primary navigation">
+      <button class="sidebar-item" type="button" aria-label="SMS">
+        <img src="/assets/icons/sms.png" alt="SMS icon" />
+        <span>SMS</span>
+      </button>
+      <button class="sidebar-item" type="button" aria-label="USSD dialpad">
+        <img src="/assets/icons/ussd-dialpad.png" alt="USSD dialpad icon" />
+        <span>USSD Dialpad</span>
+      </button>
+      <button class="sidebar-item" type="button" aria-label="Contacts">
+        <img src="/assets/icons/contacts.png" alt="Contacts icon" />
+        <span>Contacts</span>
+      </button>
+      <button class="sidebar-item" type="button" aria-label="Network">
+        <img src="/assets/icons/network.png" alt="Network icon" />
+        <span>Network</span>
+      </button>
+      <button class="sidebar-item" type="button" aria-label="Phone">
+        <img src="/assets/icons/phone.png" alt="Phone icon" />
+        <span>Phone</span>
+      </button>
+    </aside>
+
+    <main id="app" class="content-shell" aria-label="Main content area"></main>
   </body>
 </html>
