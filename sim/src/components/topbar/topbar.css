@@ -1,0 +1,210 @@
+:root {
+  --bg: #e9f3f7;
+  --panel: #ffffff;
+  --ink: #0e2033;
+  --muted: #64758b;
+  --accent: #008d86;
+  --accent-soft: #e2fbf8;
+  --line: #d7e4ea;
+  --topbar-height: clamp(66px, 9vh, 84px);
+  --sidebar-width: clamp(84px, 11vw, 112px);
+  --radius: 18px;
+  --frame-gap: clamp(10px, 1.8vw, 18px);
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+}
+
+.topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--topbar-height);
+  padding: clamp(8px, 1.4vh, 12px) clamp(10px, 2vw, 18px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 86%, #d8f4ee 14%);
+  backdrop-filter: blur(10px);
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.brand-text {
+  font-size: clamp(0.9rem, 1.2vw, 1.1rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+
+.topbar-items {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 2vw, 20px);
+  flex: 1;
+  justify-content: flex-end;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.topbar-item {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 1vw, 10px);
+  padding: clamp(6px, 1vh, 8px) clamp(10px, 1.8vw, 14px);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: clamp(0.75rem, 1vw, 0.9rem);
+  font-weight: 500;
+  color: var(--ink);
+  background: transparent;
+  cursor: default;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+button.topbar-item {
+  cursor: pointer;
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+button.topbar-item:hover {
+  background: color-mix(in srgb, var(--accent) 15%, var(--accent-soft));
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.topbar-item-status,
+.topbar-item-provider,
+.topbar-item-signal {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: var(--line);
+}
+
+.topbar-item-status:hover,
+.topbar-item-provider:hover,
+.topbar-item-signal:hover {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: color-mix(in srgb, var(--line) 150%, transparent);
+}
+
+.status-meta,
+.provider-meta,
+.signal-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.status-label,
+.provider-label,
+.signal-label {
+  font-size: clamp(0.62rem, 0.85vw, 0.75rem);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.status-values {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.provider-name {
+  font-size: clamp(0.8rem, 1.1vw, 0.95rem);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.signal-strength {
+  font-size: clamp(0.75rem, 1vw, 0.88rem);
+  font-weight: 600;
+  color: #125648;
+  text-transform: capitalize;
+}
+
+.signal-db {
+  min-width: 4.8rem;
+  font-size: clamp(0.68rem, 1.02vw, 0.8rem);
+  font-weight: 700;
+  color: #1a3d62;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  text-transform: uppercase;
+}
+
+.pill-disconnected {
+  color: #8e1f1f;
+  background: #ffe4e4;
+  border-color: #ffc2c2;
+}
+
+.pill-connected {
+  color: #0d5f43;
+  background: #defbe8;
+  border-color: #b4eccf;
+}
+
+.pill-tech {
+  color: #174c93;
+  background: #e4eeff;
+  border-color: #c9dbff;
+}
+
+.topbar-item img,
+.sidebar-item img {
+  width: clamp(18px, 2.5vw, 22px);
+  height: clamp(18px, 2.5vw, 22px);
+  object-fit: contain;
+}
+
+@media (max-width: 900px) {
+  .topbar-item-status .status-meta,
+  .topbar-item-provider .provider-meta,
+  .topbar-item-signal .signal-meta {
+    display: none;
+  }
+
+  .topbar-item-status,
+  .topbar-item-provider,
+  .topbar-item-signal {
+    border-radius: 8px;
+    padding: 6px 8px;
+  }
+}
+
+@media (max-height: 640px) {
+  :root {
+    --topbar-height: 64px;
+  }
+
+  .brand-text {
+    font-size: 0.9rem;
+  }
+}

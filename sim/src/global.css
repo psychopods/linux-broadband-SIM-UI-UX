@@ -1,0 +1,79 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  --bg: #e9f3f7;
+  --panel: #ffffff;
+  --ink: #0e2033;
+  --muted: #64758b;
+  --accent: #008d86;
+  --accent-soft: #e2fbf8;
+  --line: #d7e4ea;
+  --topbar-height: clamp(66px, 9vh, 84px);
+  --sidebar-width: clamp(84px, 11vw, 112px);
+  --radius: 18px;
+  --frame-gap: clamp(10px, 1.8vw, 18px);
+  
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top right, #d1f4f0 0%, transparent 35%),
+    radial-gradient(circle at 0% 95%, #c8ddff 0%, transparent 40%),
+    var(--bg);
+}
+
+#app-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.content-shell {
+  position: absolute;
+  top: calc(var(--topbar-height) + var(--frame-gap));
+  left: calc(var(--sidebar-width) + var(--frame-gap));
+  right: var(--frame-gap);
+  bottom: var(--frame-gap);
+  border: 1px dashed #a1bac7;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(245, 252, 255, 0.82));
+  overflow: auto;
+}
+
+.content-shell::before {
+  content: "Workspace";
+  position: absolute;
+  top: 18px;
+  left: 20px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.content-shell.sms-active::before {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .content-shell::before {
+    font-size: 0.74rem;
+  }
+}
+
+@media (max-height: 640px) {
+  .content-shell::before {
+    top: 12px;
+    left: 14px;
+    font-size: 0.74rem;
+  }
+}

@@ -2,89 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="global.css" />
+    <link rel="stylesheet" href="components/topbar/topbar.css" />
+    <link rel="stylesheet" href="components/sidebar/sidebar.css" />
+    <link rel="stylesheet" href="components/sms/sms.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri App</title>
+    <title>SIM Control</title>
     <script type="module" src="/main.js" defer></script>
   </head>
 
   <body>
-    <header class="topbar" aria-label="Top navigation">
-      <div class="topbar-brand">
-        <span class="brand-dot"></span>
-        <span class="brand-text">SIM Control</span>
-      </div>
-
-      <nav class="topbar-items" aria-label="System status">
-        <button class="topbar-item" type="button" aria-label="Settings">
-          <img src="/assets/icons/settings.png" alt="Settings icon" />
-          <span>Settings</span>
-        </button>
-        <div
-          class="topbar-item topbar-item-status"
-          aria-label="Internet status"
-          id="internet-status-card"
-        >
-          <img src="/assets/icons/internet-status.png" alt="Internet status icon" />
-          <span class="status-meta">
-            <span class="status-label">Internet Status</span>
-            <span class="status-values">
-              <span class="pill pill-disconnected" id="internet-link-state">Disconnected</span>
-              <span class="pill pill-tech" id="internet-radio-tech">LTE</span>
-            </span>
-          </span>
-        </div>
-        <div
-          class="topbar-item topbar-item-provider"
-          aria-label="Network provider"
-          id="network-provider-card"
-        >
-          <img src="/assets/icons/network-provider.png" alt="Network provider icon" />
-          <span class="provider-meta">
-            <span class="provider-label">Network Provider</span>
-            <span class="provider-name" id="network-provider-name">No Network</span>
-          </span>
-        </div>
-        <div
-          class="topbar-item topbar-item-signal"
-          aria-label="Network signal"
-          id="network-signal-card"
-        >
-          <span class="signal-meta">
-            <span class="signal-label">Network Signal</span>
-            <span class="signal-values">
-              <img class="signal-level-icon" id="network-signal-icon" src="/assets/icons/signal-none.png" alt="Signal level" />
-              <span class="signal-strength" id="network-signal-strength">Low</span>
-              <span class="signal-db" id="network-signal-db">-105 dBm</span>
-            </span>
-          </span>
-        </div>
-      </nav>
-    </header>
-
-    <aside class="sidebar" aria-label="Primary navigation">
-      <button class="sidebar-item" type="button" aria-label="SMS">
-        <img src="/assets/icons/sms.png" alt="SMS icon" />
-        <span>SMS</span>
-      </button>
-      <button class="sidebar-item" type="button" aria-label="USSD dialpad">
-        <img src="/assets/icons/ussd-dialpad.png" alt="USSD dialpad icon" />
-        <span>USSD Dialpad</span>
-      </button>
-      <button class="sidebar-item" type="button" aria-label="Contacts">
-        <img src="/assets/icons/contacts.png" alt="Contacts icon" />
-        <span>Contacts</span>
-      </button>
-      <button class="sidebar-item" type="button" aria-label="Network">
-        <img src="/assets/icons/network.png" alt="Network icon" />
-        <span>Network</span>
-      </button>
-      <button class="sidebar-item" type="button" aria-label="Phone">
-        <img src="/assets/icons/phone.png" alt="Phone icon" />
-        <span>Phone</span>
-      </button>
-    </aside>
-
-    <main id="app" class="content-shell" aria-label="Main content area"></main>
+    <div id="app-root">
+      <!-- Topbar will be inserted here -->
+      <div id="topbar-mount"></div>
+      
+      <!-- Sidebar will be inserted here -->
+      <div id="sidebar-mount"></div>
+      
+      <!-- Main content area -->
+      <main id="app" class="content-shell" aria-label="Main content area">
+        <!-- SMS component will be inserted here -->
+        <div id="sms-mount"></div>
+      </main>
+    </div>
   </body>
 </html>

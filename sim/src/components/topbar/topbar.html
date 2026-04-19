@@ -1,0 +1,50 @@
+<header class="topbar" aria-label="Top navigation">
+  <div class="topbar-brand">
+    <span class="brand-dot"></span>
+    <span class="brand-text">SIM Control</span>
+  </div>
+
+  <nav class="topbar-items" aria-label="System status">
+    <button class="topbar-item" type="button" aria-label="Settings">
+      <img src="/assets/icons/icons8-settings-50.gif" alt="Settings icon" />
+      <span>Settings</span>
+    </button>
+    <div
+      class="topbar-item topbar-item-status"
+      aria-label="Internet status"
+      id="internet-status-card"
+    >
+      <img src="/assets/icons/icons8-internet-50.gif" alt="Internet status icon" />
+      <span class="status-meta">
+        <span class="status-label">Internet Status</span>
+        <span class="status-values">
+          <span class="pill pill-disconnected" id="internet-link-state">Disconnected</span>
+          <span class="pill pill-tech" id="internet-radio-tech">LTE</span>
+        </span>
+      </span>
+    </div>
+    <div
+      class="topbar-item topbar-item-provider"
+      aria-label="Network provider"
+      id="network-provider-card"
+    >
+      <img src="/assets/icons/icons8-gps-signal-50.gif" alt="Network provider icon" />
+      <span class="provider-meta">
+        <span class="provider-label">Network Provider</span>
+        <span class="provider-name" id="network-provider-name">No Network</span>
+      </span>
+    </div>
+    <div
+      class="topbar-item topbar-item-signal"
+      aria-label="Network signal"
+      id="network-signal-card"
+    >
+      <img id="network-signal-icon" src="/assets/icons/signal-none.png" alt="Network signal icon" />
+      <span class="signal-meta">
+        <span class="signal-label">Signal</span>
+        <span class="signal-strength" id="network-signal-strength">None</span>
+        <span class="signal-db" id="network-signal-db">-110 dBm</span>
+      </span>
+    </div>
+  </nav>
+</header>

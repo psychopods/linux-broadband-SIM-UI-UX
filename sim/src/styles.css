@@ -387,3 +387,285 @@ button.topbar-item:hover {
     font-size: 0.74rem;
   }
 }
+
+/* SMS Tab Styles */
+.sms-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: var(--bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.content-shell:has(.sms-container[style*="display: flex"]) .content-shell::before {
+  display: none;
+}
+
+.sms-content-shell.sms-active::before {
+  display: none;
+}
+
+/* Scrollbar styling for SMS */
+.sms-contacts-list::-webkit-scrollbar,
+.sms-messages-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sms-contacts-list::-webkit-scrollbar-track,
+.sms-messages-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sms-contacts-list::-webkit-scrollbar-thumb,
+.sms-messages-area::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 3px;
+}
+
+.sms-contacts-list::-webkit-scrollbar-thumb:hover,
+.sms-messages-area::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--line) 150%, transparent);
+}
+
+.sms-contacts-panel {
+  width: clamp(200px, 25%, 320px);
+  height: 100%;
+  border-right: 1px solid var(--line);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sms-contacts-header {
+  padding: var(--frame-gap);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 90%, var(--accent-soft) 10%);
+}
+
+.sms-contacts-header h2 {
+  margin: 0;
+  font-size: clamp(1rem, 1.4vw, 1.2rem);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.sms-contacts-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sms-contact-item {
+  padding: var(--frame-gap);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: var(--frame-gap);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.sms-contact-item:hover {
+  background: color-mix(in srgb, var(--accent-soft) 50%, transparent);
+}
+
+.sms-contact-item.active {
+  background: var(--accent-soft);
+}
+
+.sms-contact-avatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.sms-contact-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sms-contact-name {
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.sms-contact-preview {
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.sms-chat-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.sms-chat-header {
+  padding: var(--frame-gap);
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sms-chat-header h2 {
+  margin: 0;
+  font-size: clamp(1rem, 1.4vw, 1.2rem);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.sms-chat-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sms-action-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.sms-action-btn:hover {
+  background: color-mix(in srgb, var(--accent) 20%, var(--accent-soft));
+}
+
+.sms-messages-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--frame-gap);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sms-placeholder {
+  margin: auto;
+  color: var(--muted);
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.sms-message {
+  display: flex;
+  margin-bottom: 8px;
+}
+
+.sms-message.sent {
+  justify-content: flex-end;
+}
+
+.sms-message.received {
+  justify-content: flex-start;
+}
+
+.sms-message-bubble {
+  max-width: 70%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  word-wrap: break-word;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.sms-message.sent .sms-message-bubble {
+  background: var(--accent);
+  color: white;
+  border-radius: 12px 4px 12px 12px;
+}
+
+.sms-message.received .sms-message-bubble {
+  background: color-mix(in srgb, var(--accent-soft) 80%, white);
+  color: var(--ink);
+  border-radius: 4px 12px 12px 12px;
+}
+
+.sms-message-time {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+.sms-input-area {
+  padding: var(--frame-gap);
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  display: flex;
+  gap: 8px;
+}
+
+.sms-message-input {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent-soft) 30%, white);
+  transition: border-color 0.2s ease;
+}
+
+.sms-message-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: white;
+}
+
+.sms-message-input:disabled {
+  background: color-mix(in srgb, var(--line) 50%, white);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.sms-send-btn {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sms-send-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.sms-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
