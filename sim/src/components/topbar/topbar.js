@@ -1,7 +1,17 @@
 function normalizeRadioTech(tech) {
-  const allowed = new Set(["2G", "3G", "4G", "5G", "LTE"]);
-  const upper = (tech || "LTE").toUpperCase();
-  return allowed.has(upper) ? upper : "LTE";
+  const allowed = new Set(["2G", "3G", "4G", "5G", "LTE", "UNKNOWN"]);
+  const upper = (tech || "Unknown").toUpperCase();
+  return allowed.has(upper) ? upper : "Unknown";
+}
+
+function setInternetLoadingState(linkStateEl, label, className) {
+  if (!linkStateEl) {
+    return;
+  }
+
+  linkStateEl.textContent = label;
+  linkStateEl.classList.remove("pill-connected", "pill-disconnected", "pill-pending");
+  linkStateEl.classList.add(className);
 }
 
 function setInternetStatus({ connected, radioTech }) {
@@ -13,10 +23,11 @@ function setInternetStatus({ connected, radioTech }) {
   }
 
   const isConnected = Boolean(connected);
-  linkStateEl.textContent = isConnected ? "Connected" : "Disconnected";
-  linkStateEl.classList.toggle("pill-connected", isConnected);
-  linkStateEl.classList.toggle("pill-disconnected", !isConnected);
-
+  setInternetLoadingState(
+    linkStateEl,
+    isConnected ? "Connected" : "Disconnected",
+    isConnected ? "pill-connected" : "pill-disconnected"
+  );
   radioTechEl.textContent = normalizeRadioTech(radioTech);
 }
 
@@ -32,15 +43,23 @@ function setNetworkProvider(providerName) {
 }
 
 function normalizeDbm(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
   const parsed = Number(value);
   if (Number.isNaN(parsed)) {
-    return -105;
+    return null;
   }
 
   return Math.round(parsed);
 }
 
 function getSignalLevel(dbm) {
+  if (dbm === null) {
+    return { label: "Unknown" };
+  }
+
   if (dbm >= -85) {
     return { label: "High" };
   }
@@ -75,10 +94,72 @@ function setNetworkSignal(dbm) {
   const normalizedDbm = normalizeDbm(dbm);
   const signalLevel = getSignalLevel(normalizedDbm);
 
-  signalDbEl.textContent = `${normalizedDbm} dBm`;
+  signalDbEl.textContent = normalizedDbm === null ? "-- dBm" : `${normalizedDbm} dBm`;
   signalStrengthEl.textContent = signalLevel.label;
   signalIconEl.src = SIGNAL_ICONS[signalLevel.label.toLowerCase()] ?? SIGNAL_ICONS.none;
   signalIconEl.alt = `Signal: ${signalLevel.label}`;
 }
 
-export { setInternetStatus, setNetworkProvider, setNetworkSignal };
+function setSimInfo(simInfo) {
+  const simInfoEl = document.querySelector("#sim-info-value");
+
+  if (!simInfoEl) {
+    return;
+  }
+
+  const normalized = (simInfo || "").trim();
+  simInfoEl.textContent = normalized.length > 0 ? normalized : "Unavailable";
+}
+
+function setTopbarLoading() {
+  const radioTechEl = document.querySelector("#internet-radio-tech");
+  const providerEl = document.querySelector("#network-provider-name");
+
+  setInternetLoadingState(
+    document.querySelector("#internet-link-state"),
+    "Loading",
+    "pill-pending"
+  );
+
+  if (radioTechEl) {
+    radioTechEl.textContent = "Unknown";
+  }
+
+  if (providerEl) {
+    providerEl.textContent = "Loading...";
+  }
+
+  setNetworkSignal(null);
+  setSimInfo("Loading...");
+}
+
+function setTopbarUnavailable() {
+  const radioTechEl = document.querySelector("#internet-radio-tech");
+  const providerEl = document.querySelector("#network-provider-name");
+
+  setInternetLoadingState(
+    document.querySelector("#internet-link-state"),
+    "Unavailable",
+    "pill-disconnected"
+  );
+
+  if (radioTechEl) {
+    radioTechEl.textContent = "Unknown";
+  }
+
+  if (providerEl) {
+    providerEl.textContent = "Unavailable";
+  }
+
+  setNetworkSignal(null);
+  setSimInfo("Unavailable");
+}
+
+export {
+  setInternetStatus,
+  setNetworkProvider,
+  setNetworkSignal,
+  setSimInfo,
+  setTopbarLoading,
+  setTopbarUnavailable,
+};

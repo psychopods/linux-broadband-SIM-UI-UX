@@ -27,7 +27,7 @@ const MM_ACCESS_TECH_5GNR: u32 = 1 << 15;
 pub struct ModemData {
     pub connected: bool,
     pub radio_tech: String,
-    pub signal_strength: i32,
+    pub signal_strength: Option<i32>,
     pub operator_name: String,
     pub sim_info: String,
 }
@@ -262,10 +262,16 @@ fn signal_percent_to_dbm(quality_percent: u32) -> i32 {
 /// Get all modem data at once
 pub async fn get_all_modem_data() -> Result<ModemData, String> {
     let connected = get_connection_status().await.unwrap_or(false);
-    let radio_tech = get_radio_tech().await.unwrap_or_else(|_| "LTE".to_string());
-    let signal_strength = get_signal_strength().await.unwrap_or(-105);
-    let operator_name = get_operator_name().await.unwrap_or_else(|_| "No Network".to_string());
-    let sim_info = get_sim_info().await.unwrap_or_else(|_| "N/A".to_string());
+    let radio_tech = get_radio_tech()
+        .await
+        .unwrap_or_else(|_| "Unknown".to_string());
+    let signal_strength = get_signal_strength().await.ok();
+    let operator_name = get_operator_name()
+        .await
+        .unwrap_or_else(|_| "Unavailable".to_string());
+    let sim_info = get_sim_info()
+        .await
+        .unwrap_or_else(|_| "Unavailable".to_string());
 
     Ok(ModemData {
         connected,
@@ -275,3 +281,29 @@ pub async fn get_all_modem_data() -> Result<ModemData, String> {
         sim_info,
     })
 }
+
+//TODO:
+// Add connect/disconnect, registration state, roaming state, and current bearer/APN details.
+// SIM management
+// Show SIM present/absent, ICCID/IMSI, PIN lock state, and PIN unlock flow.
+// SMS real data
+// Read messages from ModemManager or the modem messaging interface, list threads, open a conversation, and send SMS for real.
+// USSD
+// Add a dialpad and execute USSD requests like balance checks.
+// Operator and scan tools
+// Show current operator code/name, network scan results, and manual operator selection if your modem supports it.
+// Diagnostics
+// Expose modem path, IMEI, access technology bitmask, signal quality percent, and raw errors so debugging hardware issues is easier.
+// Recommended build order
+
+// Finish topbar realism
+// Build a Network panel
+// Build SIM details and PIN handling
+// Replace SMS mock data
+// Add USSD
+// Why that order
+
+// Topbar gives instant trust.
+// Network and SIM controls are the core of a “SIM control” app.
+// SMS and USSD are valuable, but they depend more on device capability and more D-Bus surface area.
+

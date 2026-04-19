@@ -1,7 +1,5 @@
 import {
-  setInternetStatus,
-  setNetworkProvider,
-  setNetworkSignal,
+  setTopbarLoading,
 } from "./components/topbar/topbar.js";
 import { initSidebar } from "./components/sidebar/sidebar.js";
 import { initSMS } from "./components/sms/sms.js";
@@ -40,10 +38,8 @@ async function initializeApp() {
   initSidebar();
   initSMS();
 
-  // Render immediately with safe defaults, then hydrate from backend.
-  setInternetStatus({ connected: false, radioTech: "LTE" });
-  setNetworkProvider("No Network");
-  setNetworkSignal(-105);
+  // Render immediately with an honest loading state, then hydrate from backend.
+  setTopbarLoading();
 
   // Fetch real modem data from backend and update UI.
   startModemPolling(5000);

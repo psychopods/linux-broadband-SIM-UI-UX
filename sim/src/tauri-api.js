@@ -13,7 +13,7 @@ function getInvoke() {
 
 /**
  * Get all modem data at once
- * @returns {Promise<{connected: boolean, radio_tech: string, signal_strength: number, operator_name: string, sim_info: string}>}
+ * @returns {Promise<{connected: boolean, radio_tech: string, signal_strength: number | null, operator_name: string, sim_info: string} | null>}
  */
 export async function getModemData() {
   try {
@@ -33,7 +33,7 @@ export async function getRadioTechnology() {
     return await getInvoke()("get_radio_technology");
   } catch (error) {
     console.error("Failed to get radio technology:", error);
-    return "LTE";
+    return "Unknown";
   }
 }
 
@@ -59,7 +59,7 @@ export async function getOperatorName() {
     return await getInvoke()("get_operator");
   } catch (error) {
     console.error("Failed to get operator name:", error);
-    return "No Network";
+    return "Unavailable";
   }
 }
 
@@ -85,7 +85,7 @@ export async function getSimInfo() {
     return await getInvoke()("get_sim");
   } catch (error) {
     console.error("Failed to get SIM info:", error);
-    return "N/A";
+    return "Unavailable";
   }
 }
 
@@ -94,27 +94,31 @@ export async function getSimInfo() {
  * This is the main entry point for hydrating the UI with backend data
  */
 export async function updateAllModemData() {
-  const { setInternetStatus, setNetworkProvider, setNetworkSignal } = await import(
+  const { setInternetStatus, setNetworkProvider, setNetworkSignal, setSimInfo, setTopbarUnavailable } = await import(
     "./components/topbar/topbar.js"
   );
 
   try {
     const modemData = await getModemData();
 
-    if (modemData) {
-      setInternetStatus({
-        connected: modemData.connected,
-        radioTech: modemData.radio_tech,
-      });
-
-      setNetworkProvider(modemData.operator_name);
-
-      setNetworkSignal(modemData.signal_strength);
-
-      console.log("Updated UI with real modem data:", modemData);
+    if (!modemData) {
+      setTopbarUnavailable();
+      return;
     }
+
+    setInternetStatus({
+      connected: modemData.connected,
+      radioTech: modemData.radio_tech,
+    });
+
+    setNetworkProvider(modemData.operator_name);
+    setNetworkSignal(modemData.signal_strength);
+    setSimInfo(modemData.sim_info);
+
+    console.log("Updated UI with real modem data:", modemData);
   } catch (error) {
     console.error("Failed to update modem data:", error);
+    setTopbarUnavailable();
   }
 }
 

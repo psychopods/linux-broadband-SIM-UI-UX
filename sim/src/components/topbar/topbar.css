@@ -82,7 +82,8 @@ button.topbar-item {
 
 .status-meta,
 .provider-meta,
-.signal-meta {
+.signal-meta,
+.sim-meta {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -90,7 +91,8 @@ button.topbar-item {
 
 .status-label,
 .provider-label,
-.signal-label {
+.signal-label,
+.sim-label {
   font-size: clamp(0.62rem, 0.85vw, 0.75rem);
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -120,6 +122,16 @@ button.topbar-item {
 .signal-db {
   min-width: 4.8rem;
   font-size: clamp(0.68rem, 1.02vw, 0.8rem);
+  font-weight: 700;
+  color: #1a3d62;
+}
+
+.sim-value {
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(0.74rem, 1.02vw, 0.84rem);
   font-weight: 700;
   color: #1a3d62;
 }
@@ -156,6 +168,12 @@ button.topbar-item {
   border-color: #c9dbff;
 }
 
+.pill-pending {
+  color: #77591b;
+  background: #fff4d9;
+  border-color: #f1d693;
+}
+
 .topbar-item img,
 .sidebar-item img {
   width: clamp(18px, 2.5vw, 22px);
@@ -166,13 +184,15 @@ button.topbar-item {
 @media (max-width: 900px) {
   .topbar-item-status .status-meta,
   .topbar-item-provider .provider-meta,
-  .topbar-item-signal .signal-meta {
+  .topbar-item-signal .signal-meta,
+  .topbar-item-sim .sim-meta {
     display: none;
   }
 
   .topbar-item-status,
   .topbar-item-provider,
-  .topbar-item-signal {
+  .topbar-item-signal,
+  .topbar-item-sim {
     border-radius: 8px;
     padding: 6px 8px;
   }

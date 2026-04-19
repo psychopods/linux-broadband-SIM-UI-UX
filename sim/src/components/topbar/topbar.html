@@ -18,8 +18,8 @@
       <span class="status-meta">
         <span class="status-label">Internet Status</span>
         <span class="status-values">
-          <span class="pill pill-disconnected" id="internet-link-state">Disconnected</span>
-          <span class="pill pill-tech" id="internet-radio-tech">LTE</span>
+          <span class="pill pill-pending" id="internet-link-state">Loading</span>
+          <span class="pill pill-tech" id="internet-radio-tech">Unknown</span>
         </span>
       </span>
     </div>
@@ -31,7 +31,7 @@
       <img src="/assets/icons/icons8-gps-signal-50.gif" alt="Network provider icon" />
       <span class="provider-meta">
         <span class="provider-label">Network Provider</span>
-        <span class="provider-name" id="network-provider-name">No Network</span>
+        <span class="provider-name" id="network-provider-name">Loading...</span>
       </span>
     </div>
     <div
@@ -42,8 +42,15 @@
       <img id="network-signal-icon" src="/assets/icons/signal-none.png" alt="Network signal icon" />
       <span class="signal-meta">
         <span class="signal-label">Signal</span>
-        <span class="signal-strength" id="network-signal-strength">None</span>
-        <span class="signal-db" id="network-signal-db">-110 dBm</span>
+        <span class="signal-strength" id="network-signal-strength">Loading</span>
+        <span class="signal-db" id="network-signal-db">-- dBm</span>
+      </span>
+    </div>
+    <div class="topbar-item topbar-item-sim" aria-label="SIM information" id="sim-info-card">
+      <img src="/assets/icons/network-provider.png" alt="SIM information icon" />
+      <span class="sim-meta">
+        <span class="sim-label">SIM</span>
+        <span class="sim-value" id="sim-info-value">Loading...</span>
       </span>
     </div>
   </nav>
