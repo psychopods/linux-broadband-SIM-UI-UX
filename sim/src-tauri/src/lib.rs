@@ -1,8 +1,9 @@
 use sim_broadband_gui::{
     connect_network, disconnect_network, get_all_modem_data, get_connection_status,
     get_current_bearer_details, get_network_controls, get_operator_name, get_radio_tech,
-    get_registration_state, get_roaming_state, get_signal_strength, get_sim_info, BearerDetails,
-    ModemData, NetworkControls,
+    get_registration_state, get_roaming_state, get_signal_strength, get_sim_info,
+    get_sim_management, unlock_sim_pin, BearerDetails, ModemData, NetworkControls,
+    SimManagement,
 };
 
 // Tauri command to get all modem data
@@ -35,6 +36,16 @@ async fn get_connection() -> Result<bool, String> {
 #[tauri::command]
 async fn get_sim() -> Result<String, String> {
     get_sim_info().await
+}
+
+#[tauri::command]
+async fn get_sim_management_state() -> Result<SimManagement, String> {
+    get_sim_management().await
+}
+
+#[tauri::command]
+async fn unlock_sim(pin: String) -> Result<(), String> {
+    unlock_sim_pin(pin).await
 }
 
 #[tauri::command]
@@ -78,9 +89,11 @@ pub fn run() {
             get_operator,
             get_connection,
             get_sim,
+            get_sim_management_state,
             get_network_status,
             connect_modem,
             disconnect_modem,
+            unlock_sim,
             get_registration,
             get_roaming,
             get_current_bearer,

@@ -68,5 +68,52 @@
         </div>
       </div>
     </article>
+
+    <article class="network-card">
+      <div class="network-card-header">
+        <div>
+          <p class="network-card-label">SIM</p>
+          <h3>SIM Management</h3>
+        </div>
+      </div>
+
+      <div class="network-stat-list">
+        <div class="network-stat">
+          <span>Presence</span>
+          <strong id="network-sim-presence">Loading</strong>
+        </div>
+        <div class="network-stat">
+          <span>ICCID</span>
+          <strong id="network-sim-iccid">--</strong>
+        </div>
+        <div class="network-stat">
+          <span>IMSI</span>
+          <strong id="network-sim-imsi">--</strong>
+        </div>
+        <div class="network-stat">
+          <span>PIN State</span>
+          <strong id="network-sim-pin-state">Loading</strong>
+        </div>
+      </div>
+
+      <div id="network-sim-unlock-panel" class="network-sim-unlock" hidden>
+        <label class="network-field">
+          <span>SIM PIN</span>
+          <input
+            id="network-sim-pin-input"
+            type="password"
+            placeholder="Enter PIN"
+            inputmode="numeric"
+            autocomplete="off"
+          />
+        </label>
+        <div class="network-actions">
+          <button id="network-sim-unlock-btn" class="network-btn network-btn-primary" type="button">
+            Unlock SIM
+          </button>
+        </div>
+        <p class="network-feedback" id="network-sim-feedback">SIM ready</p>
+      </div>
+    </article>
   </div>
 </section>

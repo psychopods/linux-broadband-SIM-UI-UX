@@ -90,6 +90,19 @@ export async function getSimInfo() {
 }
 
 /**
+ * Get SIM management details.
+ * @returns {Promise<{present: boolean, iccid: string | null, imsi: string | null, pin_lock_state: string, unlock_required: boolean} | null>}
+ */
+export async function getSimManagement() {
+  try {
+    return await getInvoke()("get_sim_management_state");
+  } catch (error) {
+    console.error("Failed to get SIM management state:", error);
+    return null;
+  }
+}
+
+/**
  * Get network controls data
  * @returns {Promise<{connected: boolean, registration_state: string, roaming: boolean, bearer: {path: string, connected: boolean, interface: string | null, apn: string | null} | null} | null>}
  */
@@ -110,6 +123,12 @@ export async function connectModem(apn) {
 
 export async function disconnectModem() {
   return await getInvoke()("disconnect_modem");
+}
+
+export async function unlockSim(pin) {
+  return await getInvoke()("unlock_sim", {
+    pin: typeof pin === "string" ? pin.trim() : "",
+  });
 }
 
 /**

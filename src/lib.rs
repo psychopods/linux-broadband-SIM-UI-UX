@@ -38,6 +38,7 @@ pub struct ModemData {
     pub signal_strength: Option<i32>,
     pub operator_name: String,
     pub sim_info: String,
+    pub sim_management: SimManagement,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,6 +55,16 @@ pub struct NetworkControls {
     pub registration_state: String,
     pub roaming: bool,
     pub bearer: Option<BearerDetails>,
+    pub sim_management: SimManagement,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SimManagement {
+    pub present: bool,
+    pub iccid: Option<String>,
+    pub imsi: Option<String>,
+    pub pin_lock_state: String,
+    pub unlock_required: bool,
 }
 
 struct ModemContext {
@@ -128,25 +139,67 @@ pub async fn get_connection_status() -> Result<bool, String> {
 
 /// Get SIM card information
 pub async fn get_sim_info() -> Result<String, String> {
-    let context = connect_to_modem().await?;
-    let proxy = sim_proxy(&context).await?;
+    let sim_management = get_sim_management().await?;
 
-    let sim_identifier: String = proxy
-        .get_property("SimIdentifier")
-        .await
-        .unwrap_or_default();
-
-    if !sim_identifier.trim().is_empty() {
-        return Ok(sim_identifier);
+    if let Some(iccid) = sim_management.iccid {
+        return Ok(iccid);
     }
 
-    let imsi: String = proxy.get_property("Imsi").await.unwrap_or_default();
+    if let Some(imsi) = sim_management.imsi {
+        return Ok(imsi);
+    }
 
-    if imsi.trim().is_empty() {
+    if sim_management.present {
         Err("SIM present but no identifier could be read".to_string())
     } else {
-        Ok(imsi)
+        Err("No SIM is present".to_string())
     }
+}
+
+pub async fn get_sim_management() -> Result<SimManagement, String> {
+    let context = connect_to_modem().await?;
+    let modem = modem_proxy(&context).await?;
+    let unlock_required = get_unlock_required_from_proxy(&modem).await?;
+
+    let Some(_) = context.sim_path.as_ref() else {
+        return Ok(SimManagement {
+            present: false,
+            iccid: None,
+            imsi: None,
+            pin_lock_state: "Absent".to_string(),
+            unlock_required: false,
+        });
+    };
+
+    let sim = sim_proxy(&context).await?;
+    let iccid = non_empty_string(
+        sim.get_property::<String>("SimIdentifier")
+            .await
+            .unwrap_or_default(),
+    );
+    let imsi = non_empty_string(sim.get_property::<String>("Imsi").await.unwrap_or_default());
+
+    Ok(SimManagement {
+        present: true,
+        iccid,
+        imsi,
+        pin_lock_state: modem_lock_label(unlock_required).to_string(),
+        unlock_required: !matches!(unlock_required, 0 | 1),
+    })
+}
+
+pub async fn unlock_sim_pin(pin: String) -> Result<(), String> {
+    let trimmed_pin = pin.trim();
+    if trimmed_pin.is_empty() {
+        return Err("PIN cannot be empty".to_string());
+    }
+
+    let context = connect_to_modem().await?;
+    let modem = modem_proxy(&context).await?;
+
+    modem.call::<_, _, ()>("SendPin", &(trimmed_pin,))
+        .await
+        .map_err(|e| format!("Failed to unlock SIM with PIN: {e}"))
 }
 
 async fn connect_to_modem() -> Result<ModemContext, String> {
@@ -308,6 +361,11 @@ fn signal_percent_to_dbm(quality_percent: u32) -> i32 {
     dbm.round() as i32
 }
 
+fn non_empty_string(value: String) -> Option<String> {
+    let trimmed = value.trim();
+    (!trimmed.is_empty()).then(|| trimmed.to_string())
+}
+
 async fn is_modem_connected(modem_proxy: &Proxy<'_>) -> Result<bool, String> {
     let state: i32 = modem_proxy
         .get_property("State")
@@ -336,6 +394,13 @@ async fn is_roaming_from_proxy(proxy: &Proxy<'_>) -> Result<bool, String> {
         .map_err(|e| format!("Failed to read modem roaming state: {e}"))?;
 
     Ok(matches!(registration_state, 5 | 7 | 10))
+}
+
+async fn get_unlock_required_from_proxy(proxy: &Proxy<'_>) -> Result<u32, String> {
+    proxy
+        .get_property("UnlockRequired")
+        .await
+        .map_err(|e| format!("Failed to read modem unlock state: {e}"))
 }
 
 async fn get_current_bearer_details_from_proxy(
@@ -393,6 +458,34 @@ fn root_object_path() -> OwnedObjectPath {
     OwnedObjectPath::try_from("/").expect("root object path must always be valid")
 }
 
+fn modem_lock_label(lock: u32) -> &'static str {
+    match lock {
+        0 => "Unknown",
+        1 => "Unlocked",
+        2 => "PIN required",
+        3 => "PIN2 required",
+        4 => "PUK required",
+        5 => "PUK2 required",
+        6 => "Service provider PIN required",
+        7 => "Service provider PUK required",
+        8 => "Network PIN required",
+        9 => "Network PUK required",
+        10 => "Corporate PIN required",
+        11 => "Corporate PUK required",
+        12 => "PH-SIM PIN required",
+        13 => "PH-FSIM PIN required",
+        14 => "PH-FSIM PUK required",
+        15 => "SIM PIN required",
+        16 => "PH-NETSUB PIN required",
+        17 => "PH-NETSUB PUK required",
+        18 => "PH-SP PIN required",
+        19 => "PH-SP PUK required",
+        20 => "PH-CORP PIN required",
+        21 => "PH-CORP PUK required",
+        _ => "Unknown",
+    }
+}
+
 fn registration_state_label(state: u32) -> &'static str {
     match state {
         0 => "Idle",
@@ -420,6 +513,13 @@ pub async fn get_all_modem_data() -> Result<ModemData, String> {
     let operator_name = get_operator_name()
         .await
         .unwrap_or_else(|_| "Unavailable".to_string());
+    let sim_management = get_sim_management().await.unwrap_or(SimManagement {
+        present: false,
+        iccid: None,
+        imsi: None,
+        pin_lock_state: "Unavailable".to_string(),
+        unlock_required: false,
+    });
     let sim_info = get_sim_info()
         .await
         .unwrap_or_else(|_| "Unavailable".to_string());
@@ -430,6 +530,7 @@ pub async fn get_all_modem_data() -> Result<ModemData, String> {
         signal_strength,
         operator_name,
         sim_info,
+        sim_management,
     })
 }
 
@@ -437,6 +538,29 @@ pub async fn get_network_controls() -> Result<NetworkControls, String> {
     let context = connect_to_modem().await?;
     let modem = modem_proxy(&context).await?;
     let modem_3gpp = modem_3gpp_proxy(&context).await?;
+    let unlock_required = get_unlock_required_from_proxy(&modem).await.unwrap_or(0);
+    let sim_management = if context.sim_path.is_some() {
+        let sim = sim_proxy(&context).await?;
+        SimManagement {
+            present: true,
+            iccid: non_empty_string(
+                sim.get_property::<String>("SimIdentifier")
+                    .await
+                    .unwrap_or_default(),
+            ),
+            imsi: non_empty_string(sim.get_property::<String>("Imsi").await.unwrap_or_default()),
+            pin_lock_state: modem_lock_label(unlock_required).to_string(),
+            unlock_required: !matches!(unlock_required, 0 | 1),
+        }
+    } else {
+        SimManagement {
+            present: false,
+            iccid: None,
+            imsi: None,
+            pin_lock_state: "Absent".to_string(),
+            unlock_required: false,
+        }
+    };
 
     let connected = is_modem_connected(&modem).await?;
     let registration_state = get_registration_state_from_proxy(&modem_3gpp).await?;
@@ -448,6 +572,7 @@ pub async fn get_network_controls() -> Result<NetworkControls, String> {
         registration_state,
         roaming,
         bearer,
+        sim_management,
     })
 }
 
@@ -503,8 +628,6 @@ pub async fn get_current_bearer_details() -> Result<Option<BearerDetails>, Strin
     get_current_bearer_details_from_proxy(&context, &proxy).await
 }
 
-// TODO: Add SIM management: SIM present/absent state, ICCID/IMSI, PIN lock state,
-// and a PIN unlock flow.
 // TODO: Replace SMS mock data with real modem messaging support, including thread
 // listing, conversation view, and sending SMS.
 // TODO: Add USSD support with a dialpad and request execution for balance checks

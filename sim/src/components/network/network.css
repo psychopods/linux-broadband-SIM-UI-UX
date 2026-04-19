@@ -152,6 +152,12 @@
   color: #a13131;
 }
 
+.network-sim-unlock {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(167, 192, 203, 0.45);
+}
+
 .network-stat-list {
   display: flex;
   flex-direction: column;

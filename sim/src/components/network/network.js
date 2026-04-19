@@ -1,4 +1,4 @@
-import { connectModem, disconnectModem } from "../../tauri-api.js";
+import { connectModem, disconnectModem, unlockSim } from "../../tauri-api.js";
 
 function setText(selector, value, fallback = "--") {
   const element = document.querySelector(selector);
@@ -13,6 +13,17 @@ function setText(selector, value, fallback = "--") {
 
 function setFeedback(message, isError = false) {
   const feedbackEl = document.querySelector("#network-action-feedback");
+
+  if (!feedbackEl) {
+    return;
+  }
+
+  feedbackEl.textContent = message;
+  feedbackEl.classList.toggle("is-error", isError);
+}
+
+function setSimFeedback(message, isError = false) {
+  const feedbackEl = document.querySelector("#network-sim-feedback");
 
   if (!feedbackEl) {
     return;
@@ -40,6 +51,44 @@ function setBusy(isBusy) {
   }
 }
 
+function setSimBusy(isBusy) {
+  const pinInput = document.querySelector("#network-sim-pin-input");
+  const unlockBtn = document.querySelector("#network-sim-unlock-btn");
+
+  if (pinInput) {
+    pinInput.disabled = isBusy;
+  }
+
+  if (unlockBtn) {
+    unlockBtn.disabled = isBusy;
+  }
+}
+
+function renderSimManagement(simManagement) {
+  const unlockPanel = document.querySelector("#network-sim-unlock-panel");
+  const pinInput = document.querySelector("#network-sim-pin-input");
+  const present = Boolean(simManagement?.present);
+  const unlockRequired = Boolean(simManagement?.unlock_required);
+
+  setText("#network-sim-presence", present ? "Present" : "Absent", "Unknown");
+  setText("#network-sim-iccid", simManagement?.iccid, "--");
+  setText("#network-sim-imsi", simManagement?.imsi, "--");
+  setText("#network-sim-pin-state", simManagement?.pin_lock_state, "Unknown");
+
+  if (unlockPanel) {
+    unlockPanel.hidden = !present || !unlockRequired;
+  }
+
+  if (pinInput && !unlockRequired) {
+    pinInput.value = "";
+  }
+
+  setSimFeedback(
+    !present ? "No SIM detected" : unlockRequired ? "SIM unlock required" : "SIM ready",
+    false
+  );
+}
+
 export function renderNetworkControls(networkControls) {
   if (!networkControls) {
     setNetworkPanelUnavailable();
@@ -62,6 +111,7 @@ export function renderNetworkControls(networkControls) {
   setText("#network-bearer-interface", bearer?.interface, "--");
   setText("#network-bearer-apn", bearer?.apn, "--");
   setText("#network-bearer-path", bearer?.path, "--");
+  renderSimManagement(networkControls.sim_management);
 
   const connectBtn = document.querySelector("#network-connect-btn");
   const disconnectBtn = document.querySelector("#network-disconnect-btn");
@@ -92,6 +142,17 @@ export function setNetworkPanelUnavailable() {
   setText("#network-bearer-interface", "--");
   setText("#network-bearer-apn", "--");
   setText("#network-bearer-path", "--");
+  setText("#network-sim-presence", "Unavailable");
+  setText("#network-sim-iccid", "--");
+  setText("#network-sim-imsi", "--");
+  setText("#network-sim-pin-state", "Unavailable");
+  const unlockPanel = document.querySelector("#network-sim-unlock-panel");
+
+  if (unlockPanel) {
+    unlockPanel.hidden = true;
+  }
+
+  setSimFeedback("SIM data unavailable", true);
   setFeedback("Modem data unavailable", true);
 }
 
@@ -102,6 +163,8 @@ export function initNetworkPanel() {
   const connectBtn = document.querySelector("#network-connect-btn");
   const disconnectBtn = document.querySelector("#network-disconnect-btn");
   const apnInput = document.querySelector("#network-apn-input");
+  const pinInput = document.querySelector("#network-sim-pin-input");
+  const unlockBtn = document.querySelector("#network-sim-unlock-btn");
 
   window.addEventListener("sidebar-item-click", (e) => {
     if (e.detail.label === "Network") {
@@ -156,6 +219,22 @@ export function initNetworkPanel() {
       setFeedback(String(error), true);
     } finally {
       setBusy(false);
+    }
+  });
+
+  unlockBtn?.addEventListener("click", async () => {
+    try {
+      setSimBusy(true);
+      setSimFeedback("Unlocking SIM...");
+      await unlockSim(pinInput?.value ?? "");
+      const { updateAllModemData } = await import("../../tauri-api.js");
+      await updateAllModemData();
+      setSimFeedback("SIM unlock request sent");
+    } catch (error) {
+      console.error("Failed to unlock SIM:", error);
+      setSimFeedback(String(error), true);
+    } finally {
+      setSimBusy(false);
     }
   });
 }
