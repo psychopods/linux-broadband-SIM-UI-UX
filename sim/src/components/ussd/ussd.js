@@ -9,6 +9,7 @@ import {
 const ussdState = {
   shortcuts: [],
   loading: false,
+  session: null,
 };
 
 let ussdTab;
@@ -87,6 +88,42 @@ function renderSession(session) {
   );
 }
 
+function hasVisibleSessionContent(session) {
+  return Boolean(
+    session?.response?.trim() ||
+      session?.network_request?.trim() ||
+      session?.network_notification?.trim()
+  );
+}
+
+function normalizeSession(session) {
+  if (!session) {
+    return ussdState.session;
+  }
+
+  const incomingHasContent = hasVisibleSessionContent(session);
+  const currentHasContent = hasVisibleSessionContent(ussdState.session);
+
+  if (incomingHasContent) {
+    return session;
+  }
+
+  if (
+    currentHasContent &&
+    session?.state &&
+    ["Idle", "Unknown"].includes(session.state)
+  ) {
+    return {
+      ...session,
+      response: ussdState.session?.response,
+      network_request: ussdState.session?.network_request,
+      network_notification: ussdState.session?.network_notification,
+    };
+  }
+
+  return session;
+}
+
 async function loadShortcuts() {
   ussdState.shortcuts = await getUssdShortcuts();
   renderShortcuts();
@@ -94,7 +131,8 @@ async function loadShortcuts() {
 
 export async function refreshUSSD() {
   try {
-    const session = await getUssdStatus();
+    const session = normalizeSession(await getUssdStatus());
+    ussdState.session = session;
     renderSession(session);
   } catch (error) {
     console.error("Failed to refresh USSD state:", error);
@@ -106,6 +144,7 @@ async function handleExecute() {
     setBusy(true);
     setFeedback("Sending USSD request...");
     const session = await executeUssd(codeInput?.value ?? "");
+    ussdState.session = session;
     renderSession(session);
     setFeedback("USSD request sent");
   } catch (error) {
@@ -121,6 +160,7 @@ async function handleRespond() {
     setBusy(true);
     setFeedback("Sending USSD reply...");
     const session = await respondUssd(responseInput?.value ?? "");
+    ussdState.session = session;
     renderSession(session);
     responseInput.value = "";
     setFeedback("USSD reply sent");
@@ -137,6 +177,7 @@ async function handleCancel() {
     setBusy(true);
     setFeedback("Cancelling USSD session...");
     await cancelUssdSession();
+    ussdState.session = null;
     responseInput.value = "";
     await refreshUSSD();
     setFeedback("USSD session cancelled");
