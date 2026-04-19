@@ -1,0 +1,44 @@
+<section id="contacts-tab" class="contacts-container" style="display: none;">
+  <!-- Grid panel -->
+  <div class="contacts-grid-panel">
+    <div class="contacts-header">
+      <h2>Contacts</h2>
+      <span class="contacts-count" id="contacts-count"></span>
+    </div>
+    <div class="contacts-grid" id="contacts-grid">
+      <div class="contacts-placeholder">No contacts found</div>
+    </div>
+    <div class="contacts-search-bar">
+      <label class="contacts-search-label" for="contacts-search-input">Search contact</label>
+      <input
+        id="contacts-search-input"
+        class="contacts-search-input"
+        type="search"
+        placeholder="Search by name or number"
+        autocomplete="off"
+      />
+    </div>
+  </div>
+
+  <!-- Vertical divider -->
+  <div class="contacts-divider" aria-hidden="true"></div>
+
+  <!-- Detail panel -->
+  <div class="contacts-detail-panel" id="contacts-detail-panel">
+    <div class="contacts-detail-empty" id="contacts-detail-empty">
+      <img src="/assets/icons/icons8-profile-50.gif" alt="" class="contacts-detail-empty-icon" />
+      <p>Select a contact to view details</p>
+    </div>
+
+    <div class="contacts-detail-card" id="contacts-detail-card" hidden>
+      <div class="contacts-detail-avatar" id="contacts-detail-avatar"></div>
+      <div class="contacts-detail-name" id="contacts-detail-name"></div>
+      <div class="contacts-detail-number" id="contacts-detail-number"></div>
+
+      <div class="contacts-detail-section-label">Last message</div>
+      <div class="contacts-detail-last-msg" id="contacts-detail-last-msg">
+        <span class="contacts-detail-no-msg">No messages yet</span>
+      </div>
+    </div>
+  </div>
+</section>
