@@ -131,6 +131,33 @@ export async function unlockSim(pin) {
   });
 }
 
+export async function getSmsThreads() {
+  try {
+    return await getInvoke()("get_sms_threads");
+  } catch (error) {
+    console.error("Failed to get SMS threads:", error);
+    return [];
+  }
+}
+
+export async function getSmsConversation(threadId) {
+  try {
+    return await getInvoke()("get_sms_conversation", {
+      threadId: typeof threadId === "string" ? threadId.trim() : "",
+    });
+  } catch (error) {
+    console.error("Failed to get SMS conversation:", error);
+    return [];
+  }
+}
+
+export async function sendSms(number, text) {
+  return await getInvoke()("send_sms", {
+    number: typeof number === "string" ? number.trim() : "",
+    text: typeof text === "string" ? text.trim() : "",
+  });
+}
+
 /**
  * Fetch and update all topbar widgets with real data
  * This is the main entry point for hydrating the UI with backend data
@@ -142,6 +169,7 @@ export async function updateAllModemData() {
   const { renderNetworkControls, setNetworkPanelUnavailable } = await import(
     "./components/network/network.js"
   );
+  const { refreshSMS } = await import("./components/sms/sms.js");
 
   try {
     const modemData = await getModemData();
@@ -162,12 +190,14 @@ export async function updateAllModemData() {
     setNetworkSignal(modemData.signal_strength);
     setSimInfo(modemData.sim_info);
     renderNetworkControls(networkControls);
+    await refreshSMS();
 
     console.log("Updated UI with real modem data:", modemData, networkControls);
   } catch (error) {
     console.error("Failed to update modem data:", error);
     setTopbarUnavailable();
     setNetworkPanelUnavailable();
+    await refreshSMS();
   }
 }
 

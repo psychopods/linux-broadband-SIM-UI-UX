@@ -1,14 +1,19 @@
-// Sample messages data
-const messagesData = {
-  1: [
-    { text: "Hello! How are you?", sent: false, time: "10:30" },
-    { text: "I'm doing great, thanks!", sent: true, time: "10:31" },
-    { text: "Want to grab coffee?", sent: false, time: "10:32" },
-  ],
-  2: [
-    { text: "See you later", sent: false, time: "09:15" },
-    { text: "Sounds good!", sent: true, time: "09:16" },
-  ],
+let smsTab;
+let networkTab;
+let contentShell;
+let contactsList;
+let messagesArea;
+let chatTitle;
+let messageInput;
+let sendBtn;
+
+const smsState = {
+  threads: [],
+  selectedThreadId: null,
+  selectedPeer: "",
+  loadingThreads: false,
+  loadingConversation: false,
+  sending: false,
 };
 
 function escapeHtml(text) {
@@ -17,17 +22,239 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-export function initSMS() {
-  const smsTab = document.querySelector("#sms-tab");
-  const networkTab = document.querySelector("#network-tab");
-  const contentShell = document.querySelector(".content-shell");
-  const contactItems = document.querySelectorAll(".sms-contact-item");
-  const messagesArea = document.querySelector("#sms-messages-area");
-  const chatTitle = document.querySelector("#sms-chat-title");
-  const messageInput = document.querySelector("#sms-input");
-  const sendBtn = document.querySelector("#sms-send-btn");
+function formatTimestamp(timestamp) {
+  if (!timestamp) {
+    return "";
+  }
 
-  // Handle SMS tab toggle
+  const parsed = new Date(timestamp);
+  if (Number.isNaN(parsed.getTime())) {
+    return timestamp;
+  }
+
+  return parsed.toLocaleString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function getAvatarLabel(peer) {
+  const trimmed = (peer || "").trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() : "?";
+}
+
+function setComposerEnabled(enabled) {
+  if (messageInput) {
+    messageInput.disabled = !enabled;
+  }
+
+  if (sendBtn) {
+    sendBtn.disabled = !enabled || smsState.sending;
+  }
+}
+
+function renderContacts() {
+  if (!contactsList) {
+    return;
+  }
+
+  if (smsState.loadingThreads && smsState.threads.length === 0) {
+    contactsList.innerHTML = '<div class="sms-placeholder">Loading messages...</div>';
+    return;
+  }
+
+  if (smsState.threads.length === 0) {
+    contactsList.innerHTML = '<div class="sms-placeholder">No modem messages found</div>';
+    return;
+  }
+
+  contactsList.innerHTML = smsState.threads
+    .map((thread) => {
+      const preview = thread.last_message?.text?.trim() || "No messages yet";
+      const activeClass = thread.id === smsState.selectedThreadId ? " active" : "";
+      const countLabel = thread.message_count > 0 ? ` · ${thread.message_count}` : "";
+
+      return `
+        <div class="sms-contact-item${activeClass}" data-thread-id="${escapeHtml(thread.id)}" data-peer="${escapeHtml(thread.peer)}">
+          <div class="sms-contact-avatar">${escapeHtml(getAvatarLabel(thread.peer))}</div>
+          <div class="sms-contact-info">
+            <div class="sms-contact-name">${escapeHtml(thread.peer)}${countLabel}</div>
+            <div class="sms-contact-preview">${escapeHtml(preview)}</div>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  contactsList.querySelectorAll(".sms-contact-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      const threadId = item.getAttribute("data-thread-id") || "";
+      const peer = item.getAttribute("data-peer") || "";
+      void selectThread(threadId, peer);
+    });
+  });
+}
+
+function renderMessages(messages, placeholder) {
+  if (!messagesArea) {
+    return;
+  }
+
+  if (!messages || messages.length === 0) {
+    messagesArea.innerHTML = `<div class="sms-placeholder">${escapeHtml(placeholder)}</div>`;
+    return;
+  }
+
+  messagesArea.innerHTML = messages
+    .map((message) => {
+      const directionClass = message.incoming ? "received" : "sent";
+      const timestamp = formatTimestamp(message.timestamp);
+      const meta = timestamp || message.state || "";
+
+      return `
+        <div class="sms-message ${directionClass}">
+          <div>
+            <div class="sms-message-bubble">${escapeHtml(message.text || "")}</div>
+            <div class="sms-message-time">${escapeHtml(meta)}</div>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  messagesArea.scrollTop = messagesArea.scrollHeight;
+}
+
+function setActiveThread(threadId, peer) {
+  smsState.selectedThreadId = threadId;
+  smsState.selectedPeer = peer;
+
+  if (chatTitle) {
+    chatTitle.textContent = peer || "Select a conversation";
+  }
+
+  setComposerEnabled(Boolean(threadId));
+  renderContacts();
+}
+
+async function loadConversation(threadId) {
+  const { getSmsConversation } = await import("../../tauri-api.js");
+
+  smsState.loadingConversation = true;
+  renderMessages([], "Loading conversation...");
+
+  try {
+    const messages = await getSmsConversation(threadId);
+    renderMessages(messages, "No messages yet");
+  } catch (error) {
+    console.error("Failed to load SMS conversation:", error);
+    renderMessages([], "Unable to load conversation");
+  } finally {
+    smsState.loadingConversation = false;
+  }
+}
+
+async function selectThread(threadId, peer) {
+  if (!threadId) {
+    setActiveThread(null, "");
+    renderMessages([], "Select a conversation to view messages");
+    return;
+  }
+
+  setActiveThread(threadId, peer);
+  await loadConversation(threadId);
+}
+
+export async function refreshSMS() {
+  if (!contactsList || smsState.loadingThreads) {
+    return;
+  }
+
+  const { getSmsThreads } = await import("../../tauri-api.js");
+  smsState.loadingThreads = true;
+
+  try {
+    const threads = await getSmsThreads();
+    smsState.threads = Array.isArray(threads) ? threads : [];
+
+    if (smsState.threads.length === 0) {
+      smsState.selectedThreadId = null;
+      smsState.selectedPeer = "";
+      if (chatTitle) {
+        chatTitle.textContent = "No conversations";
+      }
+      setComposerEnabled(false);
+      renderContacts();
+      renderMessages([], "No modem messages found");
+      return;
+    }
+
+    const selectedThread =
+      smsState.threads.find((thread) => thread.id === smsState.selectedThreadId) || smsState.threads[0];
+
+    renderContacts();
+
+    if (selectedThread && !smsState.loadingConversation && !smsState.sending) {
+      await selectThread(selectedThread.id, selectedThread.peer);
+    } else if (selectedThread) {
+      setActiveThread(selectedThread.id, selectedThread.peer);
+    }
+  } catch (error) {
+    console.error("Failed to refresh SMS threads:", error);
+    smsState.threads = [];
+    smsState.selectedThreadId = null;
+    smsState.selectedPeer = "";
+    renderContacts();
+    renderMessages([], "Unable to load modem messages");
+    if (chatTitle) {
+      chatTitle.textContent = "Messages unavailable";
+    }
+    setComposerEnabled(false);
+  } finally {
+    smsState.loadingThreads = false;
+  }
+}
+
+async function handleSendMessage() {
+  const text = messageInput?.value.trim() || "";
+  const threadId = smsState.selectedThreadId;
+  const number = smsState.selectedPeer;
+
+  if (!text || !threadId || !number || smsState.sending) {
+    return;
+  }
+
+  const { sendSms } = await import("../../tauri-api.js");
+  smsState.sending = true;
+  setComposerEnabled(true);
+
+  try {
+    await sendSms(number, text);
+    messageInput.value = "";
+    await refreshSMS();
+    await loadConversation(threadId);
+  } catch (error) {
+    console.error("Failed to send SMS:", error);
+    renderMessages([], `Send failed: ${String(error)}`);
+    await loadConversation(threadId);
+  } finally {
+    smsState.sending = false;
+    setComposerEnabled(Boolean(smsState.selectedThreadId));
+  }
+}
+
+export function initSMS() {
+  smsTab = document.querySelector("#sms-tab");
+  networkTab = document.querySelector("#network-tab");
+  contentShell = document.querySelector(".content-shell");
+  contactsList = document.querySelector("#sms-contacts-list");
+  messagesArea = document.querySelector("#sms-messages-area");
+  chatTitle = document.querySelector("#sms-chat-title");
+  messageInput = document.querySelector("#sms-input");
+  sendBtn = document.querySelector("#sms-send-btn");
+
   window.addEventListener("sidebar-item-click", (e) => {
     if (e.detail.label === "SMS") {
       if (smsTab) {
@@ -43,6 +270,8 @@ export function initSMS() {
         contentShell.classList.add("sms-active");
         contentShell.classList.remove("network-active");
       }
+
+      void refreshSMS();
     } else if (smsTab) {
       smsTab.style.display = "none";
 
@@ -55,87 +284,18 @@ export function initSMS() {
     }
   });
 
-  // Handle contact selection
-  contactItems.forEach((item) => {
-    item.addEventListener("click", () => {
-      // Remove active state from all contacts
-      contactItems.forEach((c) => c.classList.remove("active"));
-      item.classList.add("active");
+  setComposerEnabled(false);
+  renderContacts();
+  renderMessages([], "Select a conversation to view messages");
 
-      const contactId = item.getAttribute("data-contact-id");
-      const contactName = item.querySelector(".sms-contact-name").textContent;
-
-      // Update chat header
-      chatTitle.textContent = contactName;
-
-      // Update messages
-      const messages = messagesData[contactId] || [];
-      messagesArea.innerHTML = "";
-
-      if (messages.length === 0) {
-        messagesArea.innerHTML = '<div class="sms-placeholder">No messages yet</div>';
-      } else {
-        messages.forEach((msg) => {
-          const msgDiv = document.createElement("div");
-          msgDiv.className = `sms-message ${msg.sent ? "sent" : "received"}`;
-          msgDiv.innerHTML = `
-            <div>
-              <div class="sms-message-bubble">${escapeHtml(msg.text)}</div>
-              <div class="sms-message-time">${msg.time}</div>
-            </div>
-          `;
-          messagesArea.appendChild(msgDiv);
-        });
-      }
-
-      // Enable input
-      messageInput.disabled = false;
-      sendBtn.disabled = false;
-
-      // Auto-scroll to bottom
-      messagesArea.scrollTop = messagesArea.scrollHeight;
-    });
+  sendBtn?.addEventListener("click", () => {
+    void handleSendMessage();
   });
 
-  // Send message handler
-  sendBtn.addEventListener("click", () => {
-    const text = messageInput.value.trim();
-    if (!text) return;
-
-    const activeContact = document.querySelector(".sms-contact-item.active");
-    if (!activeContact) return;
-
-    const contactId = activeContact.getAttribute("data-contact-id");
-    if (!messagesData[contactId]) {
-      messagesData[contactId] = [];
-    }
-
-    // Add message to data
-    const now = new Date();
-    const time = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-    messagesData[contactId].push({ text, sent: true, time });
-
-    // Display message
-    const msgDiv = document.createElement("div");
-    msgDiv.className = "sms-message sent";
-    msgDiv.innerHTML = `
-      <div>
-        <div class="sms-message-bubble">${escapeHtml(text)}</div>
-        <div class="sms-message-time">${time}</div>
-      </div>
-    `;
-    messagesArea.appendChild(msgDiv);
-
-    // Clear input
-    messageInput.value = "";
-    messagesArea.scrollTop = messagesArea.scrollHeight;
-  });
-
-  // Enter key to send
-  messageInput.addEventListener("keydown", (e) => {
+  messageInput?.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendBtn.click();
+      void handleSendMessage();
     }
   });
 }

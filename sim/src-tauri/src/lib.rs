@@ -2,8 +2,9 @@ use sim_broadband_gui::{
     connect_network, disconnect_network, get_all_modem_data, get_connection_status,
     get_current_bearer_details, get_network_controls, get_operator_name, get_radio_tech,
     get_registration_state, get_roaming_state, get_signal_strength, get_sim_info,
-    get_sim_management, unlock_sim_pin, BearerDetails, ModemData, NetworkControls,
-    SimManagement,
+    get_sim_management, get_sms_conversation as fetch_sms_conversation,
+    get_sms_threads as fetch_sms_threads, send_sms as send_modem_sms, unlock_sim_pin,
+    BearerDetails, ModemData, NetworkControls, SimManagement, SmsMessage, SmsThread,
 };
 
 // Tauri command to get all modem data
@@ -78,6 +79,21 @@ async fn get_current_bearer() -> Result<Option<BearerDetails>, String> {
     get_current_bearer_details().await
 }
 
+#[tauri::command]
+async fn get_sms_threads() -> Result<Vec<SmsThread>, String> {
+    fetch_sms_threads().await
+}
+
+#[tauri::command]
+async fn get_sms_conversation(thread_id: String) -> Result<Vec<SmsMessage>, String> {
+    fetch_sms_conversation(thread_id).await
+}
+
+#[tauri::command]
+async fn send_sms(number: String, text: String) -> Result<SmsMessage, String> {
+    send_modem_sms(number, text).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -97,6 +113,9 @@ pub fn run() {
             get_registration,
             get_roaming,
             get_current_bearer,
+            get_sms_threads,
+            get_sms_conversation,
+            send_sms,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

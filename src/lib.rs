@@ -12,12 +12,16 @@ const MM_MANAGER_PATH: &str = "/org/freedesktop/ModemManager1";
 const MM_MODEM_INTERFACE: &str = "org.freedesktop.ModemManager1.Modem";
 const MM_MODEM_SIMPLE_INTERFACE: &str = "org.freedesktop.ModemManager1.Modem.Simple";
 const MM_MODEM_3GPP_INTERFACE: &str = "org.freedesktop.ModemManager1.Modem.Modem3gpp";
+const MM_MODEM_MESSAGING_INTERFACE: &str = "org.freedesktop.ModemManager1.Modem.Messaging";
 const MM_BEARER_INTERFACE: &str = "org.freedesktop.ModemManager1.Bearer";
 const MM_SIM_INTERFACE: &str = "org.freedesktop.ModemManager1.Sim";
+const MM_SMS_INTERFACE: &str = "org.freedesktop.ModemManager1.Sms";
 
 const MM_MODEM_STATE_REGISTERED: i32 = 8;
 const MM_MODEM_STATE_CONNECTING: i32 = 10;
 const MM_MODEM_STATE_CONNECTED: i32 = 11;
+const MM_SMS_STATE_RECEIVED: u32 = 3;
+const MM_SMS_STATE_SENT: u32 = 5;
 
 const MM_ACCESS_TECH_GSM: u32 = 1 << 1;
 const MM_ACCESS_TECH_GSM_COMPACT: u32 = 1 << 2;
@@ -65,6 +69,26 @@ pub struct SimManagement {
     pub imsi: Option<String>,
     pub pin_lock_state: String,
     pub unlock_required: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SmsThread {
+    pub id: String,
+    pub peer: String,
+    pub message_count: usize,
+    pub last_message: Option<SmsMessage>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SmsMessage {
+    pub id: String,
+    pub thread_id: String,
+    pub path: String,
+    pub peer: String,
+    pub text: String,
+    pub timestamp: Option<String>,
+    pub state: String,
+    pub incoming: bool,
 }
 
 struct ModemContext {
@@ -292,6 +316,17 @@ async fn modem_simple_proxy(context: &ModemContext) -> Result<Proxy<'_>, String>
     .map_err(|e| format!("Failed to create simple modem proxy: {e}"))
 }
 
+async fn modem_messaging_proxy(context: &ModemContext) -> Result<Proxy<'_>, String> {
+    Proxy::new(
+        &context.connection,
+        MM_DESTINATION,
+        context.modem_path.as_str(),
+        MM_MODEM_MESSAGING_INTERFACE,
+    )
+    .await
+    .map_err(|e| format!("Failed to create messaging proxy: {e}"))
+}
+
 async fn bearer_proxy<'a>(
     context: &'a ModemContext,
     bearer_path: &'a OwnedObjectPath,
@@ -304,6 +339,20 @@ async fn bearer_proxy<'a>(
     )
     .await
     .map_err(|e| format!("Failed to create bearer proxy: {e}"))
+}
+
+async fn sms_proxy<'a>(
+    context: &'a ModemContext,
+    sms_path: &'a OwnedObjectPath,
+) -> Result<Proxy<'a>, String> {
+    Proxy::new(
+        &context.connection,
+        MM_DESTINATION,
+        sms_path.as_str(),
+        MM_SMS_INTERFACE,
+    )
+    .await
+    .map_err(|e| format!("Failed to create SMS proxy: {e}"))
 }
 
 async fn sim_proxy(context: &ModemContext) -> Result<Proxy<'_>, String> {
@@ -456,6 +505,76 @@ fn owned_value_to_string(value: &OwnedValue) -> Option<String> {
 
 fn root_object_path() -> OwnedObjectPath {
     OwnedObjectPath::try_from("/").expect("root object path must always be valid")
+}
+
+fn sms_thread_id(number: &str) -> String {
+    let trimmed = number.trim();
+    if trimmed.is_empty() {
+        "unknown".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+fn sms_state_label(state: u32) -> &'static str {
+    match state {
+        0 => "Unknown",
+        1 => "Stored",
+        2 => "Receiving",
+        3 => "Received",
+        4 => "Sending",
+        5 => "Sent",
+        _ => "Unknown",
+    }
+}
+
+fn sms_is_incoming(state: u32) -> bool {
+    matches!(state, MM_SMS_STATE_RECEIVED)
+}
+
+async fn list_sms_messages(context: &ModemContext) -> Result<Vec<SmsMessage>, String> {
+    let messaging = modem_messaging_proxy(context).await?;
+    let sms_paths: Vec<OwnedObjectPath> = messaging
+        .get_property("Messages")
+        .await
+        .map_err(|e| format!("Failed to read modem messages: {e}"))?;
+    let mut messages = Vec::with_capacity(sms_paths.len());
+
+    for sms_path in sms_paths {
+        let proxy = sms_proxy(context, &sms_path).await?;
+        let peer = non_empty_string(proxy.get_property::<String>("Number").await.unwrap_or_default())
+            .unwrap_or_else(|| "Unknown".to_string());
+        let text = proxy.get_property::<String>("Text").await.unwrap_or_default();
+        let timestamp = non_empty_string(
+            proxy
+                .get_property::<String>("Timestamp")
+                .await
+                .unwrap_or_default(),
+        );
+        let state: u32 = proxy.get_property("State").await.unwrap_or_default();
+        let thread_id = sms_thread_id(&peer);
+
+        messages.push(SmsMessage {
+            id: sms_path.to_string(),
+            thread_id,
+            path: sms_path.to_string(),
+            peer,
+            text,
+            timestamp,
+            state: sms_state_label(state).to_string(),
+            incoming: sms_is_incoming(state),
+        });
+    }
+
+    messages.sort_by(|left, right| {
+        left.timestamp
+            .as_deref()
+            .unwrap_or("")
+            .cmp(right.timestamp.as_deref().unwrap_or(""))
+            .then_with(|| left.path.cmp(&right.path))
+    });
+
+    Ok(messages)
 }
 
 fn modem_lock_label(lock: u32) -> &'static str {
@@ -628,8 +747,110 @@ pub async fn get_current_bearer_details() -> Result<Option<BearerDetails>, Strin
     get_current_bearer_details_from_proxy(&context, &proxy).await
 }
 
-// TODO: Replace SMS mock data with real modem messaging support, including thread
-// listing, conversation view, and sending SMS.
+pub async fn get_sms_threads() -> Result<Vec<SmsThread>, String> {
+    let context = connect_to_modem().await?;
+    let messages = list_sms_messages(&context).await?;
+    let mut threads: HashMap<String, SmsThread> = HashMap::new();
+
+    for message in messages {
+        let entry = threads.entry(message.thread_id.clone()).or_insert_with(|| SmsThread {
+            id: message.thread_id.clone(),
+            peer: message.peer.clone(),
+            message_count: 0,
+            last_message: None,
+        });
+
+        entry.message_count += 1;
+        if entry
+            .last_message
+            .as_ref()
+            .and_then(|current| current.timestamp.as_deref())
+            <= message.timestamp.as_deref()
+        {
+            entry.last_message = Some(message);
+        }
+    }
+
+    let mut threads: Vec<SmsThread> = threads.into_values().collect();
+    threads.sort_by(|left, right| {
+        right
+            .last_message
+            .as_ref()
+            .and_then(|message| message.timestamp.as_deref())
+            .unwrap_or("")
+            .cmp(
+                &left
+                    .last_message
+                    .as_ref()
+                    .and_then(|message| message.timestamp.as_deref())
+                    .unwrap_or(""),
+            )
+            .then_with(|| left.peer.cmp(&right.peer))
+    });
+
+    Ok(threads)
+}
+
+pub async fn get_sms_conversation(thread_id: String) -> Result<Vec<SmsMessage>, String> {
+    let context = connect_to_modem().await?;
+    let thread_id = sms_thread_id(&thread_id);
+    let messages = list_sms_messages(&context).await?;
+
+    Ok(messages
+        .into_iter()
+        .filter(|message| message.thread_id == thread_id)
+        .collect())
+}
+
+pub async fn send_sms(number: String, text: String) -> Result<SmsMessage, String> {
+    let number = number.trim().to_string();
+    let text = text.trim().to_string();
+    if number.is_empty() {
+        return Err("SMS number cannot be empty".to_string());
+    }
+    if text.is_empty() {
+        return Err("SMS text cannot be empty".to_string());
+    }
+
+    let context = connect_to_modem().await?;
+    let messaging = modem_messaging_proxy(&context).await?;
+    let mut properties: HashMap<String, OwnedValue> = HashMap::new();
+    properties.insert(
+        "number".to_string(),
+        OwnedValue::from(zbus::zvariant::Value::from(number.as_str())),
+    );
+    properties.insert(
+        "text".to_string(),
+        OwnedValue::from(zbus::zvariant::Value::from(text.as_str())),
+    );
+
+    let sms_path: OwnedObjectPath = messaging
+        .call("Create", &(properties,))
+        .await
+        .map_err(|e| format!("Failed to create SMS: {e}"))?;
+    let sms = sms_proxy(&context, &sms_path).await?;
+    sms.call::<_, _, ()>("Send", &())
+        .await
+        .map_err(|e| format!("Failed to send SMS: {e}"))?;
+
+    let timestamp = non_empty_string(sms.get_property::<String>("Timestamp").await.unwrap_or_default());
+    let state: u32 = sms
+        .get_property("State")
+        .await
+        .unwrap_or(MM_SMS_STATE_SENT);
+
+    Ok(SmsMessage {
+        id: sms_path.to_string(),
+        thread_id: sms_thread_id(&number),
+        path: sms_path.to_string(),
+        peer: number,
+        text,
+        timestamp,
+        state: sms_state_label(state).to_string(),
+        incoming: sms_is_incoming(state),
+    })
+}
+
 // TODO: Add USSD support with a dialpad and request execution for balance checks
 // and similar flows.
 // TODO: Add operator and scan tools: current operator code/name, network scan
