@@ -8,6 +8,7 @@ let detailAvatar;
 let detailName;
 let detailNumber;
 let detailLastMsg;
+let detailMessageUserBtn;
 
 let selectedContactId = null;
 let allContacts = [];
@@ -40,6 +41,30 @@ function getContactNumber(contact) {
 
 function getContactLastMessage(contact) {
   return String(contact?.last_message?.text || "");
+}
+
+function openSmsComposerForContact(contact) {
+  const number = getContactNumber(contact);
+  if (!number) {
+    return;
+  }
+
+  const name = getContactLabel(contact);
+  const smsSidebarItem = document.querySelector('.sidebar-item[aria-label="SMS"]');
+  if (smsSidebarItem) {
+    smsSidebarItem.click();
+  } else {
+    window.dispatchEvent(new CustomEvent("sidebar-item-click", { detail: { label: "SMS" } }));
+  }
+
+  window.dispatchEvent(
+    new CustomEvent("sms-compose-recipient", {
+      detail: {
+        number,
+        label: name || number,
+      },
+    })
+  );
 }
 
 // Hue derived from contact identity so each contact gets a stable colour
@@ -194,6 +219,14 @@ function showDetailCard(contact) {
     detailLastMsg.innerHTML = '<span class="contacts-detail-no-msg">No messages yet</span>';
   }
 
+  if (detailMessageUserBtn) {
+    const canMessage = Boolean(number);
+    detailMessageUserBtn.disabled = !canMessage;
+    detailMessageUserBtn.onclick = () => {
+      openSmsComposerForContact(contact);
+    };
+  }
+
   detailEmpty.hidden = true;
   detailCard.hidden = false;
 }
@@ -231,6 +264,11 @@ export function initContacts() {
   detailName = document.querySelector("#contacts-detail-name");
   detailNumber = document.querySelector("#contacts-detail-number");
   detailLastMsg = document.querySelector("#contacts-detail-last-msg");
+  detailMessageUserBtn = document.querySelector("#contacts-message-user-btn");
+
+  if (detailMessageUserBtn) {
+    detailMessageUserBtn.disabled = true;
+  }
 
   contactsSearchInput?.addEventListener("input", (event) => {
     searchQuery = event.target.value || "";

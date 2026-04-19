@@ -317,3 +317,35 @@
   letter-spacing: 0.04em;
   margin-right: 2px;
 }
+
+.contacts-message-user-btn {
+  align-self: stretch;
+  height: clamp(38px, 5vh, 44px);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-soft) 78%, white);
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.14s ease, box-shadow 0.18s ease;
+}
+
+.contacts-message-user-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 7px 16px rgba(0, 141, 134, 0.3);
+  transform: translateY(-1px);
+}
+
+.contacts-message-user-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 141, 134, 0.2);
+}
+
+.contacts-message-user-btn:disabled {
+  cursor: not-allowed;
+  border-color: var(--line);
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel) 84%, var(--line) 16%);
+}

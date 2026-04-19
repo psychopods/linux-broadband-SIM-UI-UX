@@ -1011,9 +1011,9 @@ async fn read_sim_contacts(context: &ModemContext) -> Result<Vec<SimContact>, St
 
     let modem = modem_proxy(context).await?;
     let unlock_required = get_unlock_required_from_proxy(&modem).await.unwrap_or(0);
-    // 0 = None, 1 = Unknown, 4 = SIM-PIN2 (not needed for contacts)
-    // Only block on SIM-PIN (2) or SIM-PUK (3) which are real blockers
-    if matches!(unlock_required, 2 | 3) {
+    // Only block when the primary SIM credential is required.
+    // PIN2/PUK2 states should not prevent contact reads.
+    if matches!(unlock_required, 2 | 4 | 15) {
         return Err("SIM must be unlocked before contacts can be read".to_string());
     }
 

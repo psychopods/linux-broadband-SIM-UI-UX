@@ -14,6 +14,8 @@ const smsState = {
   threads: [],
   selectedThreadId: null,
   selectedPeer: "",
+  selectedLabel: "",
+  pendingCompose: null,
   renderedThreadsKey: "",
   renderedConversationKey: "",
   lastConversationMessages: [],
@@ -67,6 +69,31 @@ function formatTimestamp(timestamp) {
 function getAvatarLabel(peer) {
   const trimmed = (peer || "").trim();
   return trimmed ? trimmed.charAt(0).toUpperCase() : "?";
+}
+
+function normalizePhone(value) {
+  return String(value || "").replace(/\D+/g, "");
+}
+
+function phoneMatches(left, right) {
+  const a = normalizePhone(left);
+  const b = normalizePhone(right);
+
+  if (!a || !b) {
+    return String(left || "").trim() === String(right || "").trim();
+  }
+
+  if (a === b) {
+    return true;
+  }
+
+  const shorter = a.length <= b.length ? a : b;
+  const longer = a.length <= b.length ? b : a;
+  return shorter.length >= 7 && longer.endsWith(shorter);
+}
+
+function findThreadByPeer(peer) {
+  return smsState.threads.find((thread) => phoneMatches(thread.peer, peer)) || null;
 }
 
 function getThreadsKey(threads) {
@@ -361,15 +388,16 @@ function renderMessages(messages, placeholder, options = {}) {
   }
 }
 
-function setActiveThread(threadId, peer) {
+function setActiveThread(threadId, peer, label = "") {
   smsState.selectedThreadId = threadId;
   smsState.selectedPeer = peer;
+  smsState.selectedLabel = label || peer || "";
 
   if (chatTitle) {
-    chatTitle.textContent = peer || "Select a conversation";
+    chatTitle.textContent = smsState.selectedLabel || "Select a conversation";
   }
 
-  setComposerEnabled(Boolean(threadId));
+  setComposerEnabled(Boolean(peer));
   renderContacts();
 }
 
@@ -423,14 +451,14 @@ async function loadConversation(threadId, options = {}) {
 
 async function selectThread(threadId, peer) {
   if (!threadId) {
-    setActiveThread(null, "");
+    setActiveThread(null, "", "");
     smsState.lastConversationMessages = [];
     setNewMessagesIndicator(0);
     renderMessages([], "Select a conversation to view messages");
     return;
   }
 
-  setActiveThread(threadId, peer);
+  setActiveThread(threadId, peer, peer);
   await loadConversation(threadId, {
     showLoading: true,
     preserveScroll: false,
@@ -454,6 +482,7 @@ export async function refreshSMS() {
     if (smsState.threads.length === 0) {
       smsState.selectedThreadId = null;
       smsState.selectedPeer = "";
+      smsState.selectedLabel = "";
       smsState.renderedConversationKey = "";
       smsState.lastConversationMessages = [];
       setNewMessagesIndicator(0);
@@ -463,6 +492,24 @@ export async function refreshSMS() {
       setComposerEnabled(false);
       renderContacts();
       renderMessages([], "No modem messages found");
+      return;
+    }
+
+    if (smsState.pendingCompose?.number) {
+      const composeNumber = smsState.pendingCompose.number;
+      const composeLabel = smsState.pendingCompose.label || composeNumber;
+      const matchingThread = findThreadByPeer(composeNumber);
+
+      if (matchingThread) {
+        smsState.pendingCompose = null;
+        await selectThread(matchingThread.id, matchingThread.peer);
+      } else {
+        setActiveThread(null, composeNumber, composeLabel);
+        smsState.lastConversationMessages = [];
+        smsState.renderedConversationKey = "";
+        renderMessages([], `Start a new message to ${composeLabel}`);
+        renderContacts();
+      }
       return;
     }
 
@@ -477,7 +524,7 @@ export async function refreshSMS() {
       if (selectedChanged) {
         await selectThread(selectedThread.id, selectedThread.peer);
       } else {
-        setActiveThread(selectedThread.id, selectedThread.peer);
+        setActiveThread(selectedThread.id, selectedThread.peer, selectedThread.peer);
         await loadConversation(selectedThread.id, {
           showLoading: false,
           preserveScroll: !isNearBottom(),
@@ -486,7 +533,7 @@ export async function refreshSMS() {
         });
       }
     } else if (selectedThread) {
-      setActiveThread(selectedThread.id, selectedThread.peer);
+      setActiveThread(selectedThread.id, selectedThread.peer, selectedThread.peer);
     }
   } catch (error) {
     console.error("Failed to refresh SMS threads:", error);
@@ -510,10 +557,9 @@ export async function refreshSMS() {
 
 async function handleSendMessage() {
   const text = messageInput?.value.trim() || "";
-  const threadId = smsState.selectedThreadId;
   const number = smsState.selectedPeer;
 
-  if (!text || !threadId || !number || smsState.sending) {
+  if (!text || !number || smsState.sending) {
     return;
   }
 
@@ -525,24 +571,28 @@ async function handleSendMessage() {
     await sendSms(number, text);
     messageInput.value = "";
     await refreshSMS();
-    await loadConversation(threadId, {
-      showLoading: false,
-      preserveScroll: false,
-      autoScroll: true,
-      markReadIfAtBottom: true,
-    });
+
+    const matchingThread = findThreadByPeer(number);
+    if (matchingThread) {
+      await selectThread(matchingThread.id, matchingThread.peer);
+    } else {
+      renderMessages([], `Message sent to ${smsState.selectedLabel || number}`);
+    }
   } catch (error) {
     console.error("Failed to send SMS:", error);
     renderMessages([], `Send failed: ${String(error)}`);
-    await loadConversation(threadId, {
-      showLoading: false,
-      preserveScroll: true,
-      autoScroll: false,
-      markReadIfAtBottom: false,
-    });
+
+    if (smsState.selectedThreadId) {
+      await loadConversation(smsState.selectedThreadId, {
+        showLoading: false,
+        preserveScroll: true,
+        autoScroll: false,
+        markReadIfAtBottom: false,
+      });
+    }
   } finally {
     smsState.sending = false;
-    setComposerEnabled(Boolean(smsState.selectedThreadId));
+    setComposerEnabled(Boolean(smsState.selectedPeer));
   }
 }
 
@@ -607,6 +657,19 @@ export function initSMS() {
           contentShell.style.overflow = "auto";
         }
       }
+    }
+  });
+
+  window.addEventListener("sms-compose-recipient", (event) => {
+    const number = String(event?.detail?.number || "").trim();
+    const label = String(event?.detail?.label || number).trim() || number;
+    if (!number) {
+      return;
+    }
+
+    smsState.pendingCompose = { number, label };
+    if (smsTab?.style.display !== "none") {
+      void refreshSMS();
     }
   });
 
