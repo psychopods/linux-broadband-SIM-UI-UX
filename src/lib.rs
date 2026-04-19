@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use tokio::process::Command as AsyncCommand;
 use zbus::{
     fdo::ObjectManagerProxy,
     zvariant::{OwnedObjectPath, OwnedValue},
@@ -612,9 +613,11 @@ fn owned_value_to_string(value: &OwnedValue) -> Option<String> {
 }
 
 fn owned_value_to_u32(value: &OwnedValue) -> Option<u32> {
-    u32::try_from(value.clone())
-        .ok()
-        .or_else(|| i32::try_from(value.clone()).ok().map(|value| value.max(0) as u32))
+    u32::try_from(value.clone()).ok().or_else(|| {
+        i32::try_from(value.clone())
+            .ok()
+            .map(|value| value.max(0) as u32)
+    })
 }
 
 fn root_object_path() -> OwnedObjectPath {
@@ -671,7 +674,10 @@ fn phone_numbers_match(left: &str, right: &str) -> bool {
 
 fn decode_possible_ucs2(value: &str) -> String {
     let trimmed = value.trim();
-    if trimmed.len() < 4 || trimmed.len() % 4 != 0 || !trimmed.chars().all(|ch| ch.is_ascii_hexdigit()) {
+    if trimmed.len() < 4
+        || trimmed.len() % 4 != 0
+        || !trimmed.chars().all(|ch| ch.is_ascii_hexdigit())
+    {
         return trimmed.to_string();
     }
 
@@ -765,7 +771,12 @@ fn parse_cpbr_entries(response: &str, storage: &str, messages: &[SmsMessage]) ->
         };
 
         let quoted_fields = extract_quoted_fields(payload);
-        let number = quoted_fields.first().cloned().unwrap_or_default().trim().to_string();
+        let number = quoted_fields
+            .first()
+            .cloned()
+            .unwrap_or_default()
+            .trim()
+            .to_string();
         if number.is_empty() {
             continue;
         }
@@ -797,6 +808,155 @@ fn parse_cpbr_entries(response: &str, storage: &str, messages: &[SmsMessage]) ->
     contacts
 }
 
+async fn find_mbim_device(context: &ModemContext) -> Option<String> {
+    let modem = modem_proxy(context).await.ok()?;
+
+    // Ports is an array of (String, u32) where type 5 = MBIM
+    let ports: Vec<(String, u32)> = modem.get_property("Ports").await.ok()?;
+    for (port_name, port_type) in &ports {
+        if *port_type == 5 {
+            let device_path = format!("/dev/{port_name}");
+            if tokio::fs::metadata(&device_path).await.is_ok() {
+                return Some(device_path);
+            }
+        }
+    }
+
+    // Fallback: check common MBIM device paths
+    for candidate in &["/dev/cdc-wdm0", "/dev/cdc-wdm1"] {
+        if tokio::fs::metadata(candidate).await.is_ok() {
+            return Some(candidate.to_string());
+        }
+    }
+
+    None
+}
+
+fn parse_mbimcli_phonebook(output: &str, messages: &[SmsMessage]) -> Vec<SimContact> {
+    let mut contacts = Vec::new();
+    let mut current_index: Option<u32> = None;
+    let mut current_number: Option<String> = None;
+
+    for line in output.lines() {
+        let trimmed = line.trim();
+
+        if let Some(rest) = trimmed.strip_prefix("Entry index :") {
+            // Flush previous entry
+            if let (Some(index), Some(number)) = (current_index, current_number.take()) {
+                contacts.push(SimContact {
+                    id: format!("SM:{index}"),
+                    name: contact_display_name("", &number),
+                    number,
+                    storage: "SM".to_string(),
+                    index,
+                    last_message: None,
+                });
+            }
+            current_index = rest.trim().parse().ok();
+            current_number = None;
+        } else if let Some(rest) = trimmed.strip_prefix("Number:") {
+            current_number = Some(rest.trim().to_string());
+        } else if let Some(rest) = trimmed.strip_prefix("Name:") {
+            let name = rest.trim().to_string();
+            if let (Some(index), Some(number)) = (current_index.take(), current_number.take()) {
+                if !number.is_empty() {
+                    let last_message = messages
+                        .iter()
+                        .filter(|m| phone_numbers_match(&m.peer, &number))
+                        .max_by(|left, right| {
+                            left.timestamp
+                                .as_deref()
+                                .unwrap_or("")
+                                .cmp(right.timestamp.as_deref().unwrap_or(""))
+                                .then_with(|| left.path.cmp(&right.path))
+                        })
+                        .cloned();
+
+                    contacts.push(SimContact {
+                        id: format!("SM:{index}"),
+                        name: contact_display_name(&name, &number),
+                        number,
+                        storage: "SM".to_string(),
+                        index,
+                        last_message,
+                    });
+                }
+            }
+        }
+    }
+
+    // Flush last entry if Name line was missing
+    if let (Some(index), Some(number)) = (current_index, current_number) {
+        if !number.is_empty() {
+            contacts.push(SimContact {
+                id: format!("SM:{index}"),
+                name: contact_display_name("", &number),
+                number,
+                storage: "SM".to_string(),
+                index,
+                last_message: None,
+            });
+        }
+    }
+
+    contacts
+}
+
+async fn read_sim_contacts_mbim(
+    context: &ModemContext,
+    messages: &[SmsMessage],
+) -> Result<Vec<SimContact>, String> {
+    let device = find_mbim_device(context)
+        .await
+        .ok_or_else(|| "No MBIM device found for this modem".to_string())?;
+
+    let plain = AsyncCommand::new("mbimcli")
+        .arg("-d")
+        .arg(&device)
+        .arg("-p")
+        .arg("--phonebook-read-all")
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run mbimcli: {e}"))?;
+
+    let chosen_output = if plain.status.success() {
+        plain
+    } else {
+        // Some systems require root access to query MBIM phonebook through the proxy.
+        // Try non-interactive sudo so the desktop app never blocks on a password prompt.
+        let sudo = AsyncCommand::new("sudo")
+            .arg("-n")
+            .arg("mbimcli")
+            .arg("-d")
+            .arg(&device)
+            .arg("-p")
+            .arg("--phonebook-read-all")
+            .output()
+            .await
+            .map_err(|e| format!("Failed to run sudo mbimcli: {e}"))?;
+
+        if sudo.status.success() {
+            sudo
+        } else {
+            let plain_stderr = String::from_utf8_lossy(&plain.stderr);
+            let plain_stdout = String::from_utf8_lossy(&plain.stdout);
+            let sudo_stderr = String::from_utf8_lossy(&sudo.stderr);
+            let sudo_stdout = String::from_utf8_lossy(&sudo.stdout);
+
+            return Err(format!(
+                "Unable to read SIM contacts via MBIM.\n\
+                 Plain mbimcli failed: {plain_stderr} {plain_stdout}\n\
+                 sudo -n mbimcli failed: {sudo_stderr} {sudo_stdout}\n\
+                 To allow desktop access, grant passwordless sudo for this command, e.g.:\n\
+                 %plugdev ALL=(root) NOPASSWD: /usr/bin/mbimcli -d /dev/cdc-wdm* -p --phonebook-read-all"
+            ));
+        }
+    };
+
+    let stdout = String::from_utf8_lossy(&chosen_output.stdout);
+    Ok(parse_mbimcli_phonebook(&stdout, messages))
+}
+
 async fn read_sim_contacts(context: &ModemContext) -> Result<Vec<SimContact>, String> {
     if context.sim_path.is_none() {
         return Err("No SIM object is exposed by the modem".to_string());
@@ -804,12 +964,44 @@ async fn read_sim_contacts(context: &ModemContext) -> Result<Vec<SimContact>, St
 
     let modem = modem_proxy(context).await?;
     let unlock_required = get_unlock_required_from_proxy(&modem).await.unwrap_or(0);
-    if !matches!(unlock_required, 0 | 1) {
+    // 0 = None, 1 = Unknown, 4 = SIM-PIN2 (not needed for contacts)
+    // Only block on SIM-PIN (2) or SIM-PUK (3) which are real blockers
+    if matches!(unlock_required, 2 | 3) {
         return Err("SIM must be unlocked before contacts can be read".to_string());
     }
 
-    let storage = "SM";
     let messages = list_sms_messages(context).await.unwrap_or_default();
+
+    // Try AT commands first (works on modems with an AT port)
+    let at_result = read_sim_contacts_at(context, &messages).await;
+    let mut contacts = match at_result {
+        Ok(contacts) => contacts,
+        Err(_) => {
+            // Fall back to MBIM for modems that only expose an MBIM port
+            read_sim_contacts_mbim(context, &messages).await?
+        }
+    };
+
+    contacts.sort_by(|left, right| {
+        left.name
+            .to_ascii_lowercase()
+            .cmp(&right.name.to_ascii_lowercase())
+            .then_with(|| left.number.cmp(&right.number))
+            .then_with(|| left.index.cmp(&right.index))
+    });
+    contacts.dedup_by(|left, right| {
+        left.name.eq_ignore_ascii_case(&right.name)
+            && phone_numbers_match(&left.number, &right.number)
+    });
+
+    Ok(contacts)
+}
+
+async fn read_sim_contacts_at(
+    context: &ModemContext,
+    messages: &[SmsMessage],
+) -> Result<Vec<SimContact>, String> {
+    let storage = "SM";
 
     modem_command(context, &format!("AT+CPBS=\"{storage}\""), 10)
         .await
@@ -820,8 +1012,9 @@ async fn read_sim_contacts(context: &ModemContext) -> Result<Vec<SimContact>, St
         })?;
 
     let usage_response = modem_command(context, "AT+CPBS?", 10).await?;
-    let (used, total) = parse_cpbs_usage(&usage_response)
-        .ok_or_else(|| format!("Unable to parse SIM phonebook usage from modem reply: {usage_response}"))?;
+    let (used, total) = parse_cpbs_usage(&usage_response).ok_or_else(|| {
+        format!("Unable to parse SIM phonebook usage from modem reply: {usage_response}")
+    })?;
 
     if used == 0 || total == 0 {
         return Ok(Vec::new());
@@ -843,12 +1036,12 @@ async fn read_sim_contacts(context: &ModemContext) -> Result<Vec<SimContact>, St
         };
 
         match modem_command(context, &chunk_command, 20).await {
-            Ok(reply) => contacts.extend(parse_cpbr_entries(&reply, storage, &messages)),
+            Ok(reply) => contacts.extend(parse_cpbr_entries(&reply, storage, messages)),
             Err(_) if current != chunk_end => {
                 for index in current..=chunk_end {
                     let single_command = format!("AT+CPBR={index}");
                     if let Ok(reply) = modem_command(context, &single_command, 10).await {
-                        contacts.extend(parse_cpbr_entries(&reply, storage, &messages));
+                        contacts.extend(parse_cpbr_entries(&reply, storage, messages));
                     }
                 }
             }
@@ -857,17 +1050,6 @@ async fn read_sim_contacts(context: &ModemContext) -> Result<Vec<SimContact>, St
 
         current = chunk_end.saturating_add(1);
     }
-
-    contacts.sort_by(|left, right| {
-        left.name
-            .to_ascii_lowercase()
-            .cmp(&right.name.to_ascii_lowercase())
-            .then_with(|| left.number.cmp(&right.number))
-            .then_with(|| left.index.cmp(&right.index))
-    });
-    contacts.dedup_by(|left, right| {
-        left.name.eq_ignore_ascii_case(&right.name) && phone_numbers_match(&left.number, &right.number)
-    });
 
     Ok(contacts)
 }
@@ -958,10 +1140,10 @@ fn sanitize_phone_number(number: &str) -> Result<String, String> {
         return Err("Phone number cannot be empty".to_string());
     }
 
-    if trimmed
-        .chars()
-        .any(|ch| ch.is_control() || !(ch.is_ascii_digit() || matches!(ch, '+' | '*' | '#' | ' ' | '-' | '(' | ')')))
-    {
+    if trimmed.chars().any(|ch| {
+        ch.is_control()
+            || !(ch.is_ascii_digit() || matches!(ch, '+' | '*' | '#' | ' ' | '-' | '(' | ')'))
+    }) {
         return Err("Phone number contains unsupported characters".to_string());
     }
 
@@ -1146,13 +1328,22 @@ async fn get_phone_call_from_path(
     call_path: &OwnedObjectPath,
 ) -> Result<PhoneCall, String> {
     let proxy = call_proxy(context, call_path).await?;
-    let number = non_empty_string(proxy.get_property::<String>("Number").await.unwrap_or_default());
+    let number = non_empty_string(
+        proxy
+            .get_property::<String>("Number")
+            .await
+            .unwrap_or_default(),
+    );
     let state: i32 = proxy.get_property("State").await.unwrap_or_default();
     let state_reason: u32 = proxy.get_property("StateReason").await.unwrap_or_default();
     let direction: i32 = proxy.get_property("Direction").await.unwrap_or_default();
     let multiparty: bool = proxy.get_property("Multiparty").await.unwrap_or(false);
-    let audio_port =
-        non_empty_string(proxy.get_property::<String>("AudioPort").await.unwrap_or_default());
+    let audio_port = non_empty_string(
+        proxy
+            .get_property::<String>("AudioPort")
+            .await
+            .unwrap_or_default(),
+    );
     let audio_format: HashMap<String, OwnedValue> =
         proxy.get_property("AudioFormat").await.unwrap_or_default();
 
@@ -1603,10 +1794,7 @@ pub async fn cancel_ussd() -> Result<(), String> {
         return Ok(());
     }
 
-    match proxy
-        .call::<_, _, ()>("Cancel", &())
-        .await
-    {
+    match proxy.call::<_, _, ()>("Cancel", &()).await {
         Ok(()) => Ok(()),
         Err(error) => {
             let message = error.to_string();
