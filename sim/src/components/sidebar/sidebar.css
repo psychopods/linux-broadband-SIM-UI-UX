@@ -58,13 +58,15 @@
   height: 20px;
   padding: 0 6px;
   border-radius: 999px;
-  background: #d92d20;
-  color: #fff;
+  background: #e11d48;
+  color: #ffffff;
   font-size: 0.7rem;
   font-weight: 700;
   line-height: 20px;
   text-align: center;
-  box-shadow: 0 4px 12px rgba(217, 45, 32, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 6px 14px rgba(225, 29, 72, 0.35);
+  z-index: 2;
 }
 
 .sidebar-item:hover {
@@ -78,7 +80,7 @@
   object-fit: contain;
 }
 
-.sidebar-item span {
+.sidebar-item > span:not(.sidebar-badge) {
   font-size: clamp(0.62rem, 0.85vw, 0.75rem);
   line-height: 1;
 }
@@ -89,7 +91,7 @@
     padding: 8px;
   }
 
-  .sidebar-item span {
+  .sidebar-item > span:not(.sidebar-badge) {
     font-size: 0.58rem;
     line-height: 1.1;
   }

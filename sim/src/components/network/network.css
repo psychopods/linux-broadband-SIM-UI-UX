@@ -5,12 +5,15 @@
 .network-panel {
   position: absolute;
   inset: 0;
-  padding: clamp(22px, 3vw, 32px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.4vh, 16px);
+  padding: clamp(12px, 1.8vh, 20px) clamp(14px, 2vw, 22px);
   background:
     radial-gradient(circle at top right, rgba(0, 141, 134, 0.14), transparent 30%),
     radial-gradient(circle at bottom left, rgba(129, 176, 255, 0.2), transparent 36%),
     linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(240, 249, 251, 0.96));
-  overflow: auto;
+  overflow: hidden;
 }
 
 .network-panel-header {
@@ -18,7 +21,7 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
-  margin-bottom: 22px;
+  margin-bottom: 0;
 }
 
 .network-eyebrow,
@@ -58,13 +61,18 @@
 }
 
 .network-grid {
+  flex: 1;
+  min-height: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(10px, 1.4vh, 16px);
 }
 
 .network-card {
-  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: clamp(12px, 1.6vh, 18px);
   border: 1px solid rgba(167, 192, 203, 0.7);
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.8);
@@ -73,18 +81,18 @@
 }
 
 .network-card-primary {
-  grid-column: span 2;
+  grid-column: span 1;
 }
 
 .network-card-header {
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
 .network-field {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
   color: var(--ink);
   font-size: 0.92rem;
   font-weight: 600;
@@ -92,7 +100,7 @@
 
 .network-field input {
   width: 100%;
-  padding: 13px 14px;
+  padding: clamp(9px, 1.1vh, 12px) 12px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.92);
@@ -108,14 +116,14 @@
 
 .network-actions {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .network-btn {
   border: none;
   border-radius: 999px;
-  padding: 12px 18px;
+  padding: clamp(8px, 1vh, 11px) clamp(12px, 1.1vw, 16px);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
@@ -143,9 +151,9 @@
 
 .network-feedback {
   min-height: 1.4em;
-  margin: 14px 0 0;
+  margin: 8px 0 0;
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
 }
 
 .network-feedback.is-error {
@@ -153,22 +161,23 @@
 }
 
 .network-sim-unlock {
-  margin-top: 18px;
-  padding-top: 18px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid rgba(167, 192, 203, 0.45);
 }
 
 .network-stat-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
+  min-height: 0;
 }
 
 .network-stat {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  padding-bottom: 12px;
+  gap: 12px;
+  padding-bottom: 8px;
   border-bottom: 1px solid rgba(167, 192, 203, 0.45);
 }
 
@@ -198,9 +207,39 @@
   }
 }
 
+@media (max-height: 820px) {
+  .network-panel {
+    gap: 8px;
+    padding: 12px 14px;
+  }
+
+  .network-card {
+    padding: 10px;
+    border-radius: 16px;
+  }
+
+  .network-card-header {
+    margin-bottom: 8px;
+  }
+
+  .network-eyebrow,
+  .network-card-label {
+    margin: 0 0 4px;
+    font-size: 0.72rem;
+  }
+
+  .network-stat span,
+  .network-stat strong,
+  .network-feedback,
+  .network-field {
+    font-size: 0.82rem;
+  }
+}
+
 @media (max-width: 640px) {
   .network-panel {
     padding: 18px;
+    overflow: auto;
   }
 
   .network-panel-header {
