@@ -971,6 +971,13 @@ pub async fn initiate_ussd(code: String) -> Result<UssdSession, String> {
     let code = sanitize_ussd_code(&code)?;
     let context = connect_to_modem().await?;
     let proxy = modem_ussd_proxy(&context).await?;
+
+    // Cancel any existing active session before initiating a new one
+    let state: u32 = proxy.get_property("State").await.unwrap_or_default();
+    if state != 0 && state != 1 {
+        let _ = proxy.call::<_, _, ()>("Cancel", &()).await;
+    }
+
     let response: String = proxy
         .call("Initiate", &(code.as_str(),))
         .await
