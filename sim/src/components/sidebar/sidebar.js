@@ -31,3 +31,12 @@ export function setSidebarBadge(label, count) {
   badge.hidden = normalizedCount <= 0;
   badge.textContent = normalizedCount > 99 ? "99+" : String(normalizedCount);
 }
+
+export function setSidebarItemVisible(label, visible) {
+  const item = getSidebarItemByLabel(label);
+  if (!item) {
+    return;
+  }
+
+  item.hidden = !visible;
+}

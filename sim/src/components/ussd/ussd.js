@@ -15,6 +15,7 @@ const ussdState = {
 let ussdTab;
 let smsTab;
 let networkTab;
+let phoneTab;
 let contentShell;
 let codeInput;
 let responseInput;
@@ -213,6 +214,7 @@ export function initUSSD() {
   ussdTab = document.querySelector("#ussd-tab");
   smsTab = document.querySelector("#sms-tab");
   networkTab = document.querySelector("#network-tab");
+  phoneTab = document.querySelector("#phone-tab");
   contentShell = document.querySelector(".content-shell");
   codeInput = document.querySelector("#ussd-code-input");
   responseInput = document.querySelector("#ussd-response-input");
@@ -260,11 +262,16 @@ export function initUSSD() {
         networkTab.style.display = "none";
       }
 
+      if (phoneTab) {
+        phoneTab.style.display = "none";
+      }
+
       if (contentShell) {
         contentShell.style.overflow = "auto";
         contentShell.classList.add("ussd-active");
         contentShell.classList.remove("sms-active");
         contentShell.classList.remove("network-active");
+        contentShell.classList.remove("phone-active");
       }
 
       startUssdPolling();

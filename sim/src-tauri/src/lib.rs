@@ -1,12 +1,15 @@
 use sim_broadband_gui::{
-    cancel_ussd, connect_network, disconnect_network, get_all_modem_data, get_connection_status,
-    get_current_bearer_details, get_network_controls, get_operator_name, get_radio_tech,
-    get_registration_state, get_roaming_state, get_signal_strength, get_sim_info,
+    answer_phone_call as answer_modem_phone_call, cancel_ussd, connect_network,
+    disconnect_network, get_all_modem_data, get_connection_status, get_current_bearer_details,
+    get_network_controls, get_operator_name, get_phone_status as fetch_phone_status,
+    get_radio_tech, get_registration_state, get_roaming_state, get_signal_strength, get_sim_info,
     get_sim_management, get_sms_conversation as fetch_sms_conversation,
     get_sms_threads as fetch_sms_threads, get_ussd_status as fetch_ussd_status,
-    initiate_ussd as send_ussd_request, respond_to_ussd as send_ussd_response,
-    send_sms as send_modem_sms, unlock_sim_pin, BearerDetails, ModemData,
-    NetworkControls, SimManagement, SmsMessage, SmsThread, UssdSession,
+    hangup_phone_call as hangup_modem_phone_call, initiate_ussd as send_ussd_request,
+    respond_to_ussd as send_ussd_response, send_phone_dtmf as send_modem_dtmf,
+    send_sms as send_modem_sms, start_phone_call as start_modem_phone_call, unlock_sim_pin,
+    BearerDetails, ModemData, NetworkControls, PhoneStatus, SimManagement, SmsMessage, SmsThread,
+    UssdSession,
 };
 
 // Tauri command to get all modem data
@@ -116,6 +119,31 @@ async fn cancel_ussd_session() -> Result<(), String> {
     cancel_ussd().await
 }
 
+#[tauri::command]
+async fn get_phone_status() -> Result<PhoneStatus, String> {
+    fetch_phone_status().await
+}
+
+#[tauri::command]
+async fn start_phone_call(number: String) -> Result<PhoneStatus, String> {
+    start_modem_phone_call(number).await
+}
+
+#[tauri::command]
+async fn answer_phone_call() -> Result<PhoneStatus, String> {
+    answer_modem_phone_call().await
+}
+
+#[tauri::command]
+async fn hangup_phone_call() -> Result<PhoneStatus, String> {
+    hangup_modem_phone_call().await
+}
+
+#[tauri::command]
+async fn send_phone_dtmf(tones: String) -> Result<PhoneStatus, String> {
+    send_modem_dtmf(tones).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -142,6 +170,11 @@ pub fn run() {
             execute_ussd,
             respond_ussd,
             cancel_ussd_session,
+            get_phone_status,
+            start_phone_call,
+            answer_phone_call,
+            hangup_phone_call,
+            send_phone_dtmf,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

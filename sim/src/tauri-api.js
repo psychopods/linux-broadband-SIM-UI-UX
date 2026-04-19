@@ -183,6 +183,35 @@ export async function cancelUssdSession() {
   return await getInvoke()("cancel_ussd_session");
 }
 
+export async function getPhoneStatus() {
+  try {
+    return await getInvoke()("get_phone_status");
+  } catch (error) {
+    console.error("Failed to get phone status:", error);
+    return null;
+  }
+}
+
+export async function startPhoneCall(number) {
+  return await getInvoke()("start_phone_call", {
+    number: typeof number === "string" ? number.trim() : "",
+  });
+}
+
+export async function answerPhoneCall() {
+  return await getInvoke()("answer_phone_call");
+}
+
+export async function hangupPhoneCall() {
+  return await getInvoke()("hangup_phone_call");
+}
+
+export async function sendPhoneDtmf(tones) {
+  return await getInvoke()("send_phone_dtmf", {
+    tones: typeof tones === "string" ? tones.trim() : "",
+  });
+}
+
 /**
  * Fetch and update all topbar widgets with real data
  * This is the main entry point for hydrating the UI with backend data
@@ -195,6 +224,7 @@ export async function updateAllModemData() {
     "./components/network/network.js"
   );
   const { refreshSMS } = await import("./components/sms/sms.js");
+  const { refreshPhoneStatus, applyPhoneCapabilities } = await import("./components/phone/phone.js");
 
   try {
     const modemData = await getModemData();
@@ -215,6 +245,8 @@ export async function updateAllModemData() {
     setNetworkSignal(modemData.signal_strength);
     setSimInfo(modemData.sim_info);
     renderNetworkControls(networkControls);
+    applyPhoneCapabilities(modemData.phone_capabilities);
+    await refreshPhoneStatus();
     await refreshSMS();
 
     console.log("Updated UI with real modem data:", modemData, networkControls);
@@ -222,6 +254,8 @@ export async function updateAllModemData() {
     console.error("Failed to update modem data:", error);
     setTopbarUnavailable();
     setNetworkPanelUnavailable();
+    applyPhoneCapabilities(null);
+    await refreshPhoneStatus();
     await refreshSMS();
   }
 }

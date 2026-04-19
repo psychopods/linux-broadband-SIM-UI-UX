@@ -72,6 +72,10 @@ body {
   display: none;
 }
 
+.content-shell.phone-active::before {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .content-shell::before {
     font-size: 0.74rem;
