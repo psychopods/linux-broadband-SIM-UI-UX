@@ -8,6 +8,7 @@ import {
 const ussdState = {
   loading: false,
   session: null,
+  lastMeaningfulSession: null,
   visible: false,
   pollTimer: null,
 };
@@ -85,9 +86,22 @@ function normalizeSession(session) {
 
   const incomingHasContent = hasVisibleSessionContent(session);
   const currentHasContent = hasVisibleSessionContent(ussdState.session);
+  const cachedHasContent = hasVisibleSessionContent(ussdState.lastMeaningfulSession);
 
   if (incomingHasContent) {
+    ussdState.lastMeaningfulSession = {
+      ...session,
+    };
     return session;
+  }
+
+  if (cachedHasContent) {
+    return {
+      ...session,
+      response: ussdState.lastMeaningfulSession?.response,
+      network_request: ussdState.lastMeaningfulSession?.network_request,
+      network_notification: ussdState.lastMeaningfulSession?.network_notification,
+    };
   }
 
   if (
@@ -159,10 +173,19 @@ async function handleExecute() {
   try {
     setBusy(true);
     setFeedback("Sending USSD request...");
+
+    // New request should replace previous operator content.
+    ussdState.session = null;
+    ussdState.lastMeaningfulSession = null;
+    renderSession(null);
+
     const session = await executeUssd(codeInput?.value ?? "");
-    ussdState.session = session;
-    renderSession(session);
+    ussdState.session = normalizeSession(session);
+    renderSession(ussdState.session);
     setFeedback("USSD request sent");
+
+    // One immediate read to capture the next menu/prompt if the first response is transitional.
+    await refreshUSSD({ force: true });
   } catch (error) {
     console.error("Failed to execute USSD:", error);
     setFeedback(String(error), true);
@@ -176,10 +199,13 @@ async function handleRespond() {
     setBusy(true);
     setFeedback("Sending USSD reply...");
     const session = await respondUssd(responseInput?.value ?? "");
-    ussdState.session = session;
-    renderSession(session);
+    ussdState.session = normalizeSession(session);
+    renderSession(ussdState.session);
     responseInput.value = "";
     setFeedback("USSD reply sent");
+
+    // Pull the next operator response without allowing transient blanks to wipe content.
+    await refreshUSSD({ force: true });
   } catch (error) {
     console.error("Failed to reply to USSD:", error);
     setFeedback(String(error), true);
@@ -194,6 +220,7 @@ async function handleCancel() {
     setFeedback("Cancelling USSD session...");
     await cancelUssdSession();
     ussdState.session = null;
+    ussdState.lastMeaningfulSession = null;
     if (codeInput) {
       codeInput.value = "";
     }
