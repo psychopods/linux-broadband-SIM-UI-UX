@@ -4,6 +4,7 @@ import {
 import { initSidebar } from "./components/sidebar/sidebar.js";
 import { initNetworkPanel } from "./components/network/network.js";
 import { initSMS } from "./components/sms/sms.js";
+import { initUSSD } from "./components/ussd/ussd.js";
 import { startModemPolling } from "./tauri-api.js";
 
 // Component loading function
@@ -34,12 +35,14 @@ async function initializeApp() {
     loadComponent("./components/sidebar/sidebar.html", "sidebar-mount"),
     loadComponent("./components/network/network.html", "network-mount"),
     loadComponent("./components/sms/sms.html", "sms-mount"),
+    loadComponent("./components/ussd/ussd.html", "ussd-mount"),
   ]);
 
   // Initialize components
   initSidebar();
   initNetworkPanel();
   initSMS();
+  initUSSD();
 
   // Render immediately with an honest loading state, then hydrate from backend.
   setTopbarLoading();

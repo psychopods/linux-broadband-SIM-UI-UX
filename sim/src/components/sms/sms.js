@@ -545,6 +545,7 @@ async function handleSendMessage() {
 export function initSMS() {
   smsTab = document.querySelector("#sms-tab");
   networkTab = document.querySelector("#network-tab");
+  const ussdTab = document.querySelector("#ussd-tab");
   contentShell = document.querySelector(".content-shell");
   contactsList = document.querySelector("#sms-contacts-list");
   messagesArea = document.querySelector("#sms-messages-area");
@@ -575,10 +576,15 @@ export function initSMS() {
         networkTab.style.display = "none";
       }
 
+      if (ussdTab) {
+        ussdTab.style.display = "none";
+      }
+
       if (contentShell) {
         contentShell.style.overflow = "hidden";
         contentShell.classList.add("sms-active");
         contentShell.classList.remove("network-active");
+        contentShell.classList.remove("ussd-active");
       }
 
       void refreshSMS();

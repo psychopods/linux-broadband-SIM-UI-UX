@@ -158,6 +158,40 @@ export async function sendSms(number, text) {
   });
 }
 
+export async function getUssdShortcuts() {
+  try {
+    return await getInvoke()("get_ussd_shortcuts");
+  } catch (error) {
+    console.error("Failed to get USSD shortcuts:", error);
+    return [];
+  }
+}
+
+export async function getUssdStatus() {
+  try {
+    return await getInvoke()("get_ussd_status");
+  } catch (error) {
+    console.error("Failed to get USSD status:", error);
+    return null;
+  }
+}
+
+export async function executeUssd(code) {
+  return await getInvoke()("execute_ussd", {
+    code: typeof code === "string" ? code.trim() : "",
+  });
+}
+
+export async function respondUssd(response) {
+  return await getInvoke()("respond_ussd", {
+    response: typeof response === "string" ? response.trim() : "",
+  });
+}
+
+export async function cancelUssdSession() {
+  return await getInvoke()("cancel_ussd_session");
+}
+
 /**
  * Fetch and update all topbar widgets with real data
  * This is the main entry point for hydrating the UI with backend data
@@ -170,6 +204,7 @@ export async function updateAllModemData() {
     "./components/network/network.js"
   );
   const { refreshSMS } = await import("./components/sms/sms.js");
+  const { refreshUSSD } = await import("./components/ussd/ussd.js");
 
   try {
     const modemData = await getModemData();
@@ -191,6 +226,7 @@ export async function updateAllModemData() {
     setSimInfo(modemData.sim_info);
     renderNetworkControls(networkControls);
     await refreshSMS();
+    await refreshUSSD();
 
     console.log("Updated UI with real modem data:", modemData, networkControls);
   } catch (error) {
@@ -198,6 +234,7 @@ export async function updateAllModemData() {
     setTopbarUnavailable();
     setNetworkPanelUnavailable();
     await refreshSMS();
+    await refreshUSSD();
   }
 }
 

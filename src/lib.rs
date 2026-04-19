@@ -12,6 +12,7 @@ const MM_MANAGER_PATH: &str = "/org/freedesktop/ModemManager1";
 const MM_MODEM_INTERFACE: &str = "org.freedesktop.ModemManager1.Modem";
 const MM_MODEM_SIMPLE_INTERFACE: &str = "org.freedesktop.ModemManager1.Modem.Simple";
 const MM_MODEM_3GPP_INTERFACE: &str = "org.freedesktop.ModemManager1.Modem.Modem3gpp";
+const MM_MODEM_USSD_INTERFACE: &str = "org.freedesktop.ModemManager1.Modem.Modem3gpp.Ussd";
 const MM_MODEM_MESSAGING_INTERFACE: &str = "org.freedesktop.ModemManager1.Modem.Messaging";
 const MM_BEARER_INTERFACE: &str = "org.freedesktop.ModemManager1.Bearer";
 const MM_SIM_INTERFACE: &str = "org.freedesktop.ModemManager1.Sim";
@@ -91,6 +92,21 @@ pub struct SmsMessage {
     pub incoming: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UssdShortcut {
+    pub label: String,
+    pub code: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UssdSession {
+    pub code: Option<String>,
+    pub response: Option<String>,
+    pub state: String,
+    pub network_request: Option<String>,
+    pub network_notification: Option<String>,
+}
+
 struct ModemContext {
     connection: Connection,
     modem_path: OwnedObjectPath,
@@ -113,10 +129,11 @@ pub async fn get_radio_tech() -> Result<String, String> {
 pub async fn get_signal_strength() -> Result<i32, String> {
     let context = connect_to_modem().await?;
     let modem_proxy = modem_proxy(&context).await?;
-    let (quality_percent, _recent): (u32, bool) = modem_proxy
-        .get_property("SignalQuality")
-        .await
-        .map_err(|e| format!("Failed to read modem signal quality: {e}"))?;
+    let (quality_percent, _recent): (u32, bool) =
+        modem_proxy
+            .get_property("SignalQuality")
+            .await
+            .map_err(|e| format!("Failed to read modem signal quality: {e}"))?;
 
     Ok(signal_percent_to_dbm(quality_percent))
 }
@@ -125,19 +142,13 @@ pub async fn get_signal_strength() -> Result<i32, String> {
 pub async fn get_operator_name() -> Result<String, String> {
     let context = connect_to_modem().await?;
     let proxy = modem_3gpp_proxy(&context).await?;
-    let operator_name: String = proxy
-        .get_property("OperatorName")
-        .await
-        .unwrap_or_default();
+    let operator_name: String = proxy.get_property("OperatorName").await.unwrap_or_default();
 
     if !operator_name.trim().is_empty() {
         return Ok(operator_name);
     }
 
-    let operator_code: String = proxy
-        .get_property("OperatorCode")
-        .await
-        .unwrap_or_default();
+    let operator_code: String = proxy.get_property("OperatorCode").await.unwrap_or_default();
 
     if operator_code.trim().is_empty() {
         Ok("No Network".to_string())
@@ -221,7 +232,8 @@ pub async fn unlock_sim_pin(pin: String) -> Result<(), String> {
     let context = connect_to_modem().await?;
     let modem = modem_proxy(&context).await?;
 
-    modem.call::<_, _, ()>("SendPin", &(trimmed_pin,))
+    modem
+        .call::<_, _, ()>("SendPin", &(trimmed_pin,))
         .await
         .map_err(|e| format!("Failed to unlock SIM with PIN: {e}"))
 }
@@ -271,8 +283,8 @@ async fn connect_to_modem() -> Result<ModemContext, String> {
         .get_property::<OwnedObjectPath>("Sim")
         .await
         .unwrap_or_else(|_| {
-        OwnedObjectPath::try_from("/").expect("root object path must always be valid")
-    });
+            OwnedObjectPath::try_from("/").expect("root object path must always be valid")
+        });
 
     let sim_path = (sim_path.as_str() != "/").then_some(sim_path);
 
@@ -314,6 +326,17 @@ async fn modem_simple_proxy(context: &ModemContext) -> Result<Proxy<'_>, String>
     )
     .await
     .map_err(|e| format!("Failed to create simple modem proxy: {e}"))
+}
+
+async fn modem_ussd_proxy(context: &ModemContext) -> Result<Proxy<'_>, String> {
+    Proxy::new(
+        &context.connection,
+        MM_DESTINATION,
+        context.modem_path.as_str(),
+        MM_MODEM_USSD_INTERFACE,
+    )
+    .await
+    .map_err(|e| format!("Failed to create USSD proxy: {e}"))
 }
 
 async fn modem_messaging_proxy(context: &ModemContext) -> Result<Proxy<'_>, String> {
@@ -532,6 +555,77 @@ fn sms_is_incoming(state: u32) -> bool {
     matches!(state, MM_SMS_STATE_RECEIVED)
 }
 
+fn ussd_state_label(state: u32) -> &'static str {
+    match state {
+        0 => "Unknown",
+        1 => "Idle",
+        2 => "Active",
+        3 => "User response required",
+        _ => "Unknown",
+    }
+}
+
+fn default_ussd_shortcuts() -> Vec<UssdShortcut> {
+    vec![
+        UssdShortcut {
+            label: "Balance".to_string(),
+            code: "*100#".to_string(),
+        },
+        UssdShortcut {
+            label: "Data".to_string(),
+            code: "*131#".to_string(),
+        },
+        UssdShortcut {
+            label: "Airtime".to_string(),
+            code: "*124#".to_string(),
+        },
+    ]
+}
+
+fn sanitize_ussd_code(code: &str) -> Result<String, String> {
+    let trimmed = code.trim();
+    if trimmed.is_empty() {
+        return Err("USSD code cannot be empty".to_string());
+    }
+
+    if !trimmed
+        .chars()
+        .all(|ch| ch.is_ascii_digit() || matches!(ch, '*' | '#' | '+'))
+    {
+        return Err("USSD code contains unsupported characters".to_string());
+    }
+
+    Ok(trimmed.to_string())
+}
+
+async fn build_ussd_session(
+    proxy: &Proxy<'_>,
+    code: Option<String>,
+    response: Option<String>,
+) -> UssdSession {
+    let state: u32 = proxy.get_property("State").await.unwrap_or_default();
+    let network_request = non_empty_string(
+        proxy
+            .get_property::<String>("NetworkRequest")
+            .await
+            .unwrap_or_default(),
+    );
+    let network_notification = non_empty_string(
+        proxy
+            .get_property::<String>("NetworkNotification")
+            .await
+            .unwrap_or_default(),
+    );
+
+    UssdSession {
+        code,
+        response: response.or_else(|| network_request.clone()),
+        state: ussd_state_label(state).to_string(),
+        network_request,
+        network_notification,
+    }
+}
+
 async fn list_sms_messages(context: &ModemContext) -> Result<Vec<SmsMessage>, String> {
     let messaging = modem_messaging_proxy(context).await?;
     let sms_paths: Vec<OwnedObjectPath> = messaging
@@ -542,9 +636,17 @@ async fn list_sms_messages(context: &ModemContext) -> Result<Vec<SmsMessage>, St
 
     for sms_path in sms_paths {
         let proxy = sms_proxy(context, &sms_path).await?;
-        let peer = non_empty_string(proxy.get_property::<String>("Number").await.unwrap_or_default())
-            .unwrap_or_else(|| "Unknown".to_string());
-        let text = proxy.get_property::<String>("Text").await.unwrap_or_default();
+        let peer = non_empty_string(
+            proxy
+                .get_property::<String>("Number")
+                .await
+                .unwrap_or_default(),
+        )
+        .unwrap_or_else(|| "Unknown".to_string());
+        let text = proxy
+            .get_property::<String>("Text")
+            .await
+            .unwrap_or_default();
         let timestamp = non_empty_string(
             proxy
                 .get_property::<String>("Timestamp")
@@ -753,12 +855,14 @@ pub async fn get_sms_threads() -> Result<Vec<SmsThread>, String> {
     let mut threads: HashMap<String, SmsThread> = HashMap::new();
 
     for message in messages {
-        let entry = threads.entry(message.thread_id.clone()).or_insert_with(|| SmsThread {
-            id: message.thread_id.clone(),
-            peer: message.peer.clone(),
-            message_count: 0,
-            last_message: None,
-        });
+        let entry = threads
+            .entry(message.thread_id.clone())
+            .or_insert_with(|| SmsThread {
+                id: message.thread_id.clone(),
+                peer: message.peer.clone(),
+                message_count: 0,
+                last_message: None,
+            });
 
         entry.message_count += 1;
         if entry
@@ -833,11 +937,12 @@ pub async fn send_sms(number: String, text: String) -> Result<SmsMessage, String
         .await
         .map_err(|e| format!("Failed to send SMS: {e}"))?;
 
-    let timestamp = non_empty_string(sms.get_property::<String>("Timestamp").await.unwrap_or_default());
-    let state: u32 = sms
-        .get_property("State")
-        .await
-        .unwrap_or(MM_SMS_STATE_SENT);
+    let timestamp = non_empty_string(
+        sms.get_property::<String>("Timestamp")
+            .await
+            .unwrap_or_default(),
+    );
+    let state: u32 = sms.get_property("State").await.unwrap_or(MM_SMS_STATE_SENT);
 
     Ok(SmsMessage {
         id: sms_path.to_string(),
@@ -851,8 +956,51 @@ pub async fn send_sms(number: String, text: String) -> Result<SmsMessage, String
     })
 }
 
-// TODO: Add USSD support with a dialpad and request execution for balance checks
-// and similar flows.
+pub fn get_ussd_shortcuts() -> Vec<UssdShortcut> {
+    default_ussd_shortcuts()
+}
+
+pub async fn get_ussd_status() -> Result<UssdSession, String> {
+    let context = connect_to_modem().await?;
+    let proxy = modem_ussd_proxy(&context).await?;
+
+    Ok(build_ussd_session(&proxy, None, None).await)
+}
+
+pub async fn initiate_ussd(code: String) -> Result<UssdSession, String> {
+    let code = sanitize_ussd_code(&code)?;
+    let context = connect_to_modem().await?;
+    let proxy = modem_ussd_proxy(&context).await?;
+    let response: String = proxy
+        .call("Initiate", &(code.as_str(),))
+        .await
+        .map_err(|e| format!("Failed to execute USSD request: {e}"))?;
+
+    Ok(build_ussd_session(&proxy, Some(code), non_empty_string(response)).await)
+}
+
+pub async fn respond_to_ussd(response: String) -> Result<UssdSession, String> {
+    let response = sanitize_ussd_code(&response)?;
+    let context = connect_to_modem().await?;
+    let proxy = modem_ussd_proxy(&context).await?;
+    let reply: String = proxy
+        .call("Respond", &(response.as_str(),))
+        .await
+        .map_err(|e| format!("Failed to send USSD response: {e}"))?;
+
+    Ok(build_ussd_session(&proxy, None, non_empty_string(reply)).await)
+}
+
+pub async fn cancel_ussd() -> Result<(), String> {
+    let context = connect_to_modem().await?;
+    let proxy = modem_ussd_proxy(&context).await?;
+
+    proxy
+        .call::<_, _, ()>("Cancel", &())
+        .await
+        .map_err(|e| format!("Failed to cancel USSD session: {e}"))
+}
+
 // TODO: Add operator and scan tools: current operator code/name, network scan
 // results, and manual operator selection when supported.
 // TODO: Add diagnostics: modem path, IMEI, access technology bitmask, signal

@@ -159,6 +159,7 @@ export function setNetworkPanelUnavailable() {
 export function initNetworkPanel() {
   const networkTab = document.querySelector("#network-tab");
   const smsTab = document.querySelector("#sms-tab");
+  const ussdTab = document.querySelector("#ussd-tab");
   const contentShell = document.querySelector(".content-shell");
   const connectBtn = document.querySelector("#network-connect-btn");
   const disconnectBtn = document.querySelector("#network-disconnect-btn");
@@ -176,10 +177,15 @@ export function initNetworkPanel() {
         smsTab.style.display = "none";
       }
 
+      if (ussdTab) {
+        ussdTab.style.display = "none";
+      }
+
       if (contentShell) {
         contentShell.style.overflow = "auto";
         contentShell.classList.add("network-active");
         contentShell.classList.remove("sms-active");
+        contentShell.classList.remove("ussd-active");
       }
     } else if (networkTab) {
       networkTab.style.display = "none";

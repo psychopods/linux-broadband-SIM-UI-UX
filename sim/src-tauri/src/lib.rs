@@ -1,10 +1,13 @@
 use sim_broadband_gui::{
-    connect_network, disconnect_network, get_all_modem_data, get_connection_status,
+    cancel_ussd, connect_network, disconnect_network, get_all_modem_data, get_connection_status,
     get_current_bearer_details, get_network_controls, get_operator_name, get_radio_tech,
     get_registration_state, get_roaming_state, get_signal_strength, get_sim_info,
     get_sim_management, get_sms_conversation as fetch_sms_conversation,
-    get_sms_threads as fetch_sms_threads, send_sms as send_modem_sms, unlock_sim_pin,
+    get_sms_threads as fetch_sms_threads, get_ussd_shortcuts as fetch_ussd_shortcuts,
+    get_ussd_status as fetch_ussd_status, initiate_ussd as send_ussd_request,
+    respond_to_ussd as send_ussd_response, send_sms as send_modem_sms, unlock_sim_pin,
     BearerDetails, ModemData, NetworkControls, SimManagement, SmsMessage, SmsThread,
+    UssdSession, UssdShortcut,
 };
 
 // Tauri command to get all modem data
@@ -94,6 +97,31 @@ async fn send_sms(number: String, text: String) -> Result<SmsMessage, String> {
     send_modem_sms(number, text).await
 }
 
+#[tauri::command]
+fn get_ussd_shortcuts() -> Vec<UssdShortcut> {
+    fetch_ussd_shortcuts()
+}
+
+#[tauri::command]
+async fn get_ussd_status() -> Result<UssdSession, String> {
+    fetch_ussd_status().await
+}
+
+#[tauri::command]
+async fn execute_ussd(code: String) -> Result<UssdSession, String> {
+    send_ussd_request(code).await
+}
+
+#[tauri::command]
+async fn respond_ussd(response: String) -> Result<UssdSession, String> {
+    send_ussd_response(response).await
+}
+
+#[tauri::command]
+async fn cancel_ussd_session() -> Result<(), String> {
+    cancel_ussd().await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -116,6 +144,11 @@ pub fn run() {
             get_sms_threads,
             get_sms_conversation,
             send_sms,
+            get_ussd_shortcuts,
+            get_ussd_status,
+            execute_ussd,
+            respond_ussd,
+            cancel_ussd_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
