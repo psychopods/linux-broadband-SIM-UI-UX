@@ -158,15 +158,6 @@ export async function sendSms(number, text) {
   });
 }
 
-export async function getUssdShortcuts() {
-  try {
-    return await getInvoke()("get_ussd_shortcuts");
-  } catch (error) {
-    console.error("Failed to get USSD shortcuts:", error);
-    return [];
-  }
-}
-
 export async function getUssdStatus() {
   try {
     return await getInvoke()("get_ussd_status");

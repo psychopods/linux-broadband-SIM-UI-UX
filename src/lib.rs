@@ -93,12 +93,6 @@ pub struct SmsMessage {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UssdShortcut {
-    pub label: String,
-    pub code: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UssdSession {
     pub code: Option<String>,
     pub response: Option<String>,
@@ -565,34 +559,55 @@ fn ussd_state_label(state: u32) -> &'static str {
     }
 }
 
-fn default_ussd_shortcuts() -> Vec<UssdShortcut> {
-    vec![
-        UssdShortcut {
-            label: "Balance".to_string(),
-            code: "*100#".to_string(),
-        },
-        UssdShortcut {
-            label: "Data".to_string(),
-            code: "*131#".to_string(),
-        },
-        UssdShortcut {
-            label: "Airtime".to_string(),
-            code: "*124#".to_string(),
-        },
-    ]
+fn is_emoji_character(ch: char) -> bool {
+    matches!(
+        ch as u32,
+        0x00A9
+            | 0x00AE
+            | 0x203C
+            | 0x2049
+            | 0x2122
+            | 0x2139
+            | 0x2194..=0x2199
+            | 0x21A9..=0x21AA
+            | 0x231A..=0x231B
+            | 0x2328
+            | 0x23CF
+            | 0x23E9..=0x23F3
+            | 0x23F8..=0x23FA
+            | 0x24C2
+            | 0x25AA..=0x25AB
+            | 0x25B6
+            | 0x25C0
+            | 0x25FB..=0x25FE
+            | 0x2600..=0x27BF
+            | 0x2934..=0x2935
+            | 0x2B05..=0x2B07
+            | 0x2B1B..=0x2B1C
+            | 0x2B50
+            | 0x2B55
+            | 0x3030
+            | 0x303D
+            | 0x3297
+            | 0x3299
+            | 0xFE0F
+            | 0x200D
+            | 0x1F000..=0x1FAFF
+    )
 }
 
-fn sanitize_ussd_code(code: &str) -> Result<String, String> {
-    let trimmed = code.trim();
+fn sanitize_ussd_text(value: &str, field_name: &str) -> Result<String, String> {
+    let trimmed = value.trim();
     if trimmed.is_empty() {
-        return Err("USSD code cannot be empty".to_string());
+        return Err(format!("USSD {field_name} cannot be empty"));
     }
 
-    if !trimmed
-        .chars()
-        .all(|ch| ch.is_ascii_digit() || matches!(ch, '*' | '#' | '+'))
-    {
-        return Err("USSD code contains unsupported characters".to_string());
+    if trimmed.chars().any(|ch| ch.is_control()) {
+        return Err(format!("USSD {field_name} contains unsupported control characters"));
+    }
+
+    if trimmed.chars().any(is_emoji_character) {
+        return Err(format!("USSD {field_name} cannot contain emoji"));
     }
 
     Ok(trimmed.to_string())
@@ -956,10 +971,6 @@ pub async fn send_sms(number: String, text: String) -> Result<SmsMessage, String
     })
 }
 
-pub fn get_ussd_shortcuts() -> Vec<UssdShortcut> {
-    default_ussd_shortcuts()
-}
-
 pub async fn get_ussd_status() -> Result<UssdSession, String> {
     let context = connect_to_modem().await?;
     let proxy = modem_ussd_proxy(&context).await?;
@@ -968,7 +979,7 @@ pub async fn get_ussd_status() -> Result<UssdSession, String> {
 }
 
 pub async fn initiate_ussd(code: String) -> Result<UssdSession, String> {
-    let code = sanitize_ussd_code(&code)?;
+    let code = sanitize_ussd_text(&code, "code")?;
     let context = connect_to_modem().await?;
     let proxy = modem_ussd_proxy(&context).await?;
 
@@ -987,7 +998,7 @@ pub async fn initiate_ussd(code: String) -> Result<UssdSession, String> {
 }
 
 pub async fn respond_to_ussd(response: String) -> Result<UssdSession, String> {
-    let response = sanitize_ussd_code(&response)?;
+    let response = sanitize_ussd_text(&response, "reply")?;
     let context = connect_to_modem().await?;
     let proxy = modem_ussd_proxy(&context).await?;
     let reply: String = proxy
@@ -1008,7 +1019,7 @@ pub async fn cancel_ussd() -> Result<(), String> {
         .map_err(|e| format!("Failed to cancel USSD session: {e}"))
 }
 
-// TODO: Add operator and scan tools: current operator code/name, network scan
+// TODO:Add operator and scan tools: current operator code/name, network scan
 // results, and manual operator selection when supported.
 // TODO: Add diagnostics: modem path, IMEI, access technology bitmask, signal
 // quality percent, and raw errors for hardware debugging.

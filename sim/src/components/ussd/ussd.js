@@ -1,13 +1,11 @@
 import {
   cancelUssdSession,
   executeUssd,
-  getUssdShortcuts,
   getUssdStatus,
   respondUssd,
 } from "../../tauri-api.js";
 
 const ussdState = {
-  shortcuts: [],
   loading: false,
   session: null,
   visible: false,
@@ -54,29 +52,6 @@ function setBusy(isBusy) {
   if (responseInput) {
     responseInput.disabled = isBusy;
   }
-}
-
-function renderShortcuts() {
-  const container = document.querySelector("#ussd-shortcuts");
-  if (!container) {
-    return;
-  }
-
-  container.innerHTML = ussdState.shortcuts
-    .map(
-      (shortcut) =>
-        `<button class="ussd-shortcut-btn" type="button" data-code="${shortcut.code}">${shortcut.label} ${shortcut.code}</button>`
-    )
-    .join("");
-
-  container.querySelectorAll(".ussd-shortcut-btn").forEach((button) => {
-    button.addEventListener("click", () => {
-      if (codeInput) {
-        codeInput.value = button.dataset.code || "";
-        codeInput.focus();
-      }
-    });
-  });
 }
 
 function renderSession(session) {
@@ -144,11 +119,6 @@ function shouldApplyIncomingSession(session, options = {}) {
   }
 
   return true;
-}
-
-async function loadShortcuts() {
-  ussdState.shortcuts = await getUssdShortcuts();
-  renderShortcuts();
 }
 
 export async function refreshUSSD(options = {}) {
@@ -223,7 +193,12 @@ async function handleCancel() {
     setFeedback("Cancelling USSD session...");
     await cancelUssdSession();
     ussdState.session = null;
-    responseInput.value = "";
+    if (codeInput) {
+      codeInput.value = "";
+    }
+    if (responseInput) {
+      responseInput.value = "";
+    }
     await refreshUSSD({ force: true });
     setFeedback("USSD session cancelled");
   } catch (error) {
@@ -305,6 +280,5 @@ export function initUSSD() {
     }
   });
 
-  void loadShortcuts();
   void refreshUSSD({ force: true });
 }

@@ -15,8 +15,7 @@
 .ussd-panel-header,
 .ussd-card-header,
 .ussd-actions,
-.ussd-meta,
-.ussd-shortcuts {
+.ussd-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -94,11 +93,6 @@
   background: rgba(250, 251, 253, 0.95);
 }
 
-.ussd-shortcuts {
-  justify-content: flex-start;
-}
-
-.ussd-shortcut-btn,
 .ussd-dialpad button,
 .ussd-btn {
   border: none;
@@ -108,13 +102,6 @@
     transform 0.18s ease,
     box-shadow 0.18s ease,
     opacity 0.18s ease;
-}
-
-.ussd-shortcut-btn {
-  padding: 10px 14px;
-  background: #eef2f6;
-  color: #203045;
-  font-weight: 600;
 }
 
 .ussd-dialpad {
@@ -147,7 +134,6 @@
   color: #233247;
 }
 
-.ussd-shortcut-btn:hover,
 .ussd-dialpad button:hover,
 .ussd-btn:hover {
   transform: translateY(-1px);
