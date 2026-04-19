@@ -910,51 +910,98 @@ async fn read_sim_contacts_mbim(
         .await
         .ok_or_else(|| "No MBIM device found for this modem".to_string())?;
 
-    let plain = AsyncCommand::new("mbimcli")
-        .arg("-d")
-        .arg(&device)
-        .arg("-p")
-        .arg("--phonebook-read-all")
-        .output()
-        .await
-        .map_err(|e| format!("Failed to run mbimcli: {e}"))?;
+    async fn run_mbimcli_via_app(
+        device: &str,
+        mbim_arg: &str,
+    ) -> Result<(bool, String, String), String> {
+        let plain = AsyncCommand::new("mbimcli")
+            .arg("-d")
+            .arg(device)
+            .arg("-p")
+            .arg(mbim_arg)
+            .output()
+            .await
+            .map_err(|e| format!("Failed to run mbimcli: {e}"))?;
 
-    let chosen_output = if plain.status.success() {
-        plain
-    } else {
-        // Some systems require root access to query MBIM phonebook through the proxy.
-        // Try non-interactive sudo so the desktop app never blocks on a password prompt.
+        if plain.status.success() {
+            return Ok((
+                true,
+                String::from_utf8_lossy(&plain.stdout).into_owned(),
+                String::new(),
+            ));
+        }
+
+        // Non-interactive sudo fallback: never prompts in app.
         let sudo = AsyncCommand::new("sudo")
             .arg("-n")
             .arg("mbimcli")
             .arg("-d")
-            .arg(&device)
+            .arg(device)
             .arg("-p")
-            .arg("--phonebook-read-all")
+            .arg(mbim_arg)
             .output()
             .await
             .map_err(|e| format!("Failed to run sudo mbimcli: {e}"))?;
 
         if sudo.status.success() {
-            sudo
-        } else {
-            let plain_stderr = String::from_utf8_lossy(&plain.stderr);
-            let plain_stdout = String::from_utf8_lossy(&plain.stdout);
-            let sudo_stderr = String::from_utf8_lossy(&sudo.stderr);
-            let sudo_stdout = String::from_utf8_lossy(&sudo.stdout);
+            return Ok((
+                true,
+                String::from_utf8_lossy(&sudo.stdout).into_owned(),
+                String::new(),
+            ));
+        }
 
+        let combined_error = format!(
+            "Plain mbimcli failed: {} {}\n\
+             sudo -n mbimcli failed: {} {}",
+            String::from_utf8_lossy(&plain.stderr),
+            String::from_utf8_lossy(&plain.stdout),
+            String::from_utf8_lossy(&sudo.stderr),
+            String::from_utf8_lossy(&sudo.stdout)
+        );
+
+        Ok((false, String::new(), combined_error))
+    }
+
+    // Query configuration first; on several modems this initializes phonebook state.
+    let _ = run_mbimcli_via_app(&device, "--phonebook-query-configuration").await?;
+
+    let (ok_first, stdout_first, err_first) =
+        run_mbimcli_via_app(&device, "--phonebook-read-all").await?;
+
+    let contacts_output = if ok_first {
+        stdout_first
+    } else if err_first.to_ascii_lowercase().contains("notinitialized") {
+        // Retry after explicit config query for drivers that lazily initialize phonebook.
+        let _ = run_mbimcli_via_app(&device, "--phonebook-query-configuration").await?;
+        let (ok_retry, stdout_retry, err_retry) =
+            run_mbimcli_via_app(&device, "--phonebook-read-all").await?;
+
+        if ok_retry {
+            stdout_retry
+        } else {
             return Err(format!(
-                "Unable to read SIM contacts via MBIM.\n\
-                 Plain mbimcli failed: {plain_stderr} {plain_stdout}\n\
-                 sudo -n mbimcli failed: {sudo_stderr} {sudo_stdout}\n\
-                 To allow desktop access, grant passwordless sudo for this command, e.g.:\n\
+                "Unable to read SIM contacts via MBIM after automatic retries.\n\
+                 First read attempt:\n{err_first}\n\
+                 Retry read attempt:\n{err_retry}\n\
+                 This app never prompts for password.\n\
+                 For fully automatic access, allow non-interactive sudo for mbimcli, e.g.:\n\
+                 %plugdev ALL=(root) NOPASSWD: /usr/bin/mbimcli -d /dev/cdc-wdm* -p --phonebook-query-configuration\n\
                  %plugdev ALL=(root) NOPASSWD: /usr/bin/mbimcli -d /dev/cdc-wdm* -p --phonebook-read-all"
             ));
         }
+    } else {
+        return Err(format!(
+            "Unable to read SIM contacts via MBIM.\n\
+             {err_first}\n\
+             This app never prompts for password.\n\
+             For fully automatic access, allow non-interactive sudo for mbimcli, e.g.:\n\
+             %plugdev ALL=(root) NOPASSWD: /usr/bin/mbimcli -d /dev/cdc-wdm* -p --phonebook-query-configuration\n\
+             %plugdev ALL=(root) NOPASSWD: /usr/bin/mbimcli -d /dev/cdc-wdm* -p --phonebook-read-all"
+        ));
     };
 
-    let stdout = String::from_utf8_lossy(&chosen_output.stdout);
-    Ok(parse_mbimcli_phonebook(&stdout, messages))
+    Ok(parse_mbimcli_phonebook(&contacts_output, messages))
 }
 
 async fn read_sim_contacts(context: &ModemContext) -> Result<Vec<SimContact>, String> {
