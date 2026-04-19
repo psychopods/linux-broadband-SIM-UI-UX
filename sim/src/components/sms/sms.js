@@ -6,15 +6,39 @@ let messagesArea;
 let chatTitle;
 let messageInput;
 let sendBtn;
+let newMessagesIndicator;
+
+const SMS_READ_STATE_KEY = "sim.sms.readState";
 
 const smsState = {
   threads: [],
   selectedThreadId: null,
   selectedPeer: "",
+  renderedThreadsKey: "",
+  renderedConversationKey: "",
+  lastConversationMessages: [],
+  readState: loadReadState(),
+  pendingIncomingCount: 0,
   loadingThreads: false,
   loadingConversation: false,
   sending: false,
 };
+
+function loadReadState() {
+  try {
+    return JSON.parse(window.localStorage.getItem(SMS_READ_STATE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveReadState() {
+  try {
+    window.localStorage.setItem(SMS_READ_STATE_KEY, JSON.stringify(smsState.readState));
+  } catch {
+    // Ignore storage failures and keep the in-memory session state.
+  }
+}
 
 function escapeHtml(text) {
   const div = document.createElement("div");
@@ -45,6 +69,182 @@ function getAvatarLabel(peer) {
   return trimmed ? trimmed.charAt(0).toUpperCase() : "?";
 }
 
+function getThreadsKey(threads) {
+  return JSON.stringify(
+    (threads || []).map((thread) => ({
+      id: thread.id,
+      peer: thread.peer,
+      message_count: thread.message_count,
+      last_message_id: thread.last_message?.id || "",
+      last_message_text: thread.last_message?.text || "",
+      last_message_timestamp: thread.last_message?.timestamp || "",
+    }))
+  );
+}
+
+function getConversationKey(messages) {
+  return JSON.stringify(
+    (messages || []).map((message) => ({
+      id: message.id,
+      text: message.text || "",
+      timestamp: message.timestamp || "",
+      state: message.state || "",
+      incoming: Boolean(message.incoming),
+    }))
+  );
+}
+
+function getLatestIncomingMessage(messages) {
+  return [...(messages || [])].reverse().find((message) => message.incoming) || null;
+}
+
+function getReadMarker(threadId) {
+  return smsState.readState[threadId] || null;
+}
+
+function getUnreadCountForMessages(threadId, messages) {
+  const marker = getReadMarker(threadId);
+  let unreadCount = 0;
+
+  for (const message of messages || []) {
+    if (!message.incoming) {
+      continue;
+    }
+
+    if (marker && marker.id === message.id) {
+      unreadCount = 0;
+      continue;
+    }
+
+    unreadCount += 1;
+  }
+
+  return unreadCount;
+}
+
+function updateSidebarUnreadBadge() {
+  import("../sidebar/sidebar.js")
+    .then(({ setSidebarBadge }) => {
+      const unreadCount = smsState.threads.reduce(
+        (total, thread) => total + (smsState.readState[thread.id]?.unreadCount || 0),
+        0
+      );
+
+      setSidebarBadge("SMS", unreadCount);
+    })
+    .catch((error) => {
+      console.error("Failed to update SMS sidebar badge:", error);
+    });
+}
+
+function isNearBottom() {
+  if (!messagesArea) {
+    return true;
+  }
+
+  const threshold = 48;
+  return messagesArea.scrollHeight - messagesArea.scrollTop - messagesArea.clientHeight <= threshold;
+}
+
+function restoreScroll(previousOffsetFromBottom) {
+  if (!messagesArea) {
+    return;
+  }
+
+  messagesArea.scrollTop = Math.max(0, messagesArea.scrollHeight - messagesArea.clientHeight - previousOffsetFromBottom);
+}
+
+function setNewMessagesIndicator(count) {
+  smsState.pendingIncomingCount = count;
+
+  if (!newMessagesIndicator) {
+    return;
+  }
+
+  if (count > 0) {
+    newMessagesIndicator.hidden = false;
+    newMessagesIndicator.textContent = count === 1 ? "1 new message" : `${count} new messages`;
+  } else {
+    newMessagesIndicator.hidden = true;
+    newMessagesIndicator.textContent = "";
+  }
+}
+
+function markThreadAsRead(threadId, messages) {
+  const latestIncoming = getLatestIncomingMessage(messages);
+  if (!threadId) {
+    setNewMessagesIndicator(0);
+    updateSidebarUnreadBadge();
+    return;
+  }
+
+  smsState.readState[threadId] = {
+    id: latestIncoming?.id || smsState.readState[threadId]?.id || "",
+    timestamp: latestIncoming?.timestamp || smsState.readState[threadId]?.timestamp || "",
+    unreadCount: 0,
+    knownMessageCount: messages.length,
+  };
+  saveReadState();
+  setNewMessagesIndicator(0);
+  updateSidebarUnreadBadge();
+}
+
+function syncUnreadStateForThreads() {
+  let changed = false;
+  const activeVisibleAndAtBottom =
+    smsTab?.style.display !== "none" &&
+    smsState.selectedThreadId &&
+    isNearBottom();
+  const activeThreadIds = new Set(smsState.threads.map((thread) => thread.id));
+
+  for (const threadId of Object.keys(smsState.readState)) {
+    if (!activeThreadIds.has(threadId)) {
+      delete smsState.readState[threadId];
+      changed = true;
+    }
+  }
+
+  for (const thread of smsState.threads) {
+    const previous = smsState.readState[thread.id] || {};
+    let unreadCount = previous.unreadCount || 0;
+    let knownMessageCount = previous.knownMessageCount || 0;
+
+    if (thread.message_count < knownMessageCount) {
+      unreadCount = 0;
+      knownMessageCount = thread.message_count;
+    }
+
+    const delta = Math.max(0, thread.message_count - knownMessageCount);
+    if (delta > 0) {
+      if (
+        thread.id === smsState.selectedThreadId &&
+        activeVisibleAndAtBottom
+      ) {
+        unreadCount = 0;
+      } else if (thread.last_message?.incoming) {
+        unreadCount += delta;
+      }
+      knownMessageCount = thread.message_count;
+    }
+
+    const next = {
+      id: previous.id || "",
+      timestamp: previous.timestamp || "",
+      unreadCount,
+      knownMessageCount,
+    };
+
+    if (JSON.stringify(previous) !== JSON.stringify(next)) {
+      smsState.readState[thread.id] = next;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    saveReadState();
+  }
+}
+
 function setComposerEnabled(enabled) {
   if (messageInput) {
     messageInput.disabled = !enabled;
@@ -62,11 +262,20 @@ function renderContacts() {
 
   if (smsState.loadingThreads && smsState.threads.length === 0) {
     contactsList.innerHTML = '<div class="sms-placeholder">Loading messages...</div>';
+    smsState.renderedThreadsKey = "__loading__";
+    updateSidebarUnreadBadge();
     return;
   }
 
   if (smsState.threads.length === 0) {
     contactsList.innerHTML = '<div class="sms-placeholder">No modem messages found</div>';
+    smsState.renderedThreadsKey = "__empty__";
+    updateSidebarUnreadBadge();
+    return;
+  }
+
+  const threadsKey = `${getThreadsKey(smsState.threads)}::${smsState.selectedThreadId || ""}`;
+  if (threadsKey === smsState.renderedThreadsKey) {
     return;
   }
 
@@ -95,15 +304,34 @@ function renderContacts() {
       void selectThread(threadId, peer);
     });
   });
+
+  smsState.renderedThreadsKey = threadsKey;
+  updateSidebarUnreadBadge();
 }
 
-function renderMessages(messages, placeholder) {
+function renderMessages(messages, placeholder, options = {}) {
   if (!messagesArea) {
     return;
   }
 
+  const preserveScroll = Boolean(options.preserveScroll);
+  const shouldAutoScroll = options.autoScroll ?? true;
+  const previousOffsetFromBottom = preserveScroll
+    ? Math.max(0, messagesArea.scrollHeight - messagesArea.scrollTop - messagesArea.clientHeight)
+    : 0;
+  const conversationKey = getConversationKey(messages);
+
   if (!messages || messages.length === 0) {
+    const emptyKey = `empty:${placeholder}`;
+    if (emptyKey === smsState.renderedConversationKey) {
+      return;
+    }
     messagesArea.innerHTML = `<div class="sms-placeholder">${escapeHtml(placeholder)}</div>`;
+    smsState.renderedConversationKey = emptyKey;
+    return;
+  }
+
+  if (conversationKey === smsState.renderedConversationKey) {
     return;
   }
 
@@ -124,7 +352,13 @@ function renderMessages(messages, placeholder) {
     })
     .join("");
 
-  messagesArea.scrollTop = messagesArea.scrollHeight;
+  smsState.renderedConversationKey = conversationKey;
+
+  if (preserveScroll) {
+    restoreScroll(previousOffsetFromBottom);
+  } else if (shouldAutoScroll) {
+    messagesArea.scrollTop = messagesArea.scrollHeight;
+  }
 }
 
 function setActiveThread(threadId, peer) {
@@ -139,15 +373,42 @@ function setActiveThread(threadId, peer) {
   renderContacts();
 }
 
-async function loadConversation(threadId) {
+async function loadConversation(threadId, options = {}) {
   const { getSmsConversation } = await import("../../tauri-api.js");
+  const showLoading = options.showLoading ?? true;
+  const preserveScroll = options.preserveScroll ?? false;
+  const autoScroll = options.autoScroll ?? true;
+  const markReadIfAtBottom = options.markReadIfAtBottom ?? true;
 
   smsState.loadingConversation = true;
-  renderMessages([], "Loading conversation...");
+  if (showLoading) {
+    renderMessages([], "Loading conversation...");
+  }
 
   try {
     const messages = await getSmsConversation(threadId);
-    renderMessages(messages, "No messages yet");
+    const wasNearBottom = isNearBottom();
+    const previousKey = smsState.renderedConversationKey;
+    const nextKey = getConversationKey(messages);
+    const unreadIncoming = getUnreadCountForMessages(threadId, messages);
+    const incomingChanged =
+      previousKey &&
+      previousKey !== nextKey &&
+      getLatestIncomingMessage(messages)?.id !== getLatestIncomingMessage(smsState.lastConversationMessages)?.id;
+
+    smsState.lastConversationMessages = messages;
+
+    renderMessages(messages, "No messages yet", {
+      preserveScroll,
+      autoScroll,
+    });
+
+    if (markReadIfAtBottom && (autoScroll || wasNearBottom)) {
+      markThreadAsRead(threadId, messages);
+    } else if (incomingChanged && unreadIncoming > 0) {
+      setNewMessagesIndicator(unreadIncoming);
+      updateSidebarUnreadBadge();
+    }
   } catch (error) {
     console.error("Failed to load SMS conversation:", error);
     renderMessages([], "Unable to load conversation");
@@ -159,12 +420,18 @@ async function loadConversation(threadId) {
 async function selectThread(threadId, peer) {
   if (!threadId) {
     setActiveThread(null, "");
+    smsState.lastConversationMessages = [];
+    setNewMessagesIndicator(0);
     renderMessages([], "Select a conversation to view messages");
     return;
   }
 
   setActiveThread(threadId, peer);
-  await loadConversation(threadId);
+  await loadConversation(threadId, {
+    showLoading: true,
+    preserveScroll: false,
+    autoScroll: true,
+  });
 }
 
 export async function refreshSMS() {
@@ -178,10 +445,14 @@ export async function refreshSMS() {
   try {
     const threads = await getSmsThreads();
     smsState.threads = Array.isArray(threads) ? threads : [];
+    syncUnreadStateForThreads();
 
     if (smsState.threads.length === 0) {
       smsState.selectedThreadId = null;
       smsState.selectedPeer = "";
+      smsState.renderedConversationKey = "";
+      smsState.lastConversationMessages = [];
+      setNewMessagesIndicator(0);
       if (chatTitle) {
         chatTitle.textContent = "No conversations";
       }
@@ -197,7 +468,19 @@ export async function refreshSMS() {
     renderContacts();
 
     if (selectedThread && !smsState.loadingConversation && !smsState.sending) {
-      await selectThread(selectedThread.id, selectedThread.peer);
+      const selectedChanged =
+        selectedThread.id !== smsState.selectedThreadId || selectedThread.peer !== smsState.selectedPeer;
+      if (selectedChanged) {
+        await selectThread(selectedThread.id, selectedThread.peer);
+      } else {
+        setActiveThread(selectedThread.id, selectedThread.peer);
+        await loadConversation(selectedThread.id, {
+          showLoading: false,
+          preserveScroll: !isNearBottom(),
+          autoScroll: isNearBottom(),
+          markReadIfAtBottom: true,
+        });
+      }
     } else if (selectedThread) {
       setActiveThread(selectedThread.id, selectedThread.peer);
     }
@@ -206,6 +489,10 @@ export async function refreshSMS() {
     smsState.threads = [];
     smsState.selectedThreadId = null;
     smsState.selectedPeer = "";
+    smsState.renderedThreadsKey = "";
+    smsState.renderedConversationKey = "";
+    smsState.lastConversationMessages = [];
+    setNewMessagesIndicator(0);
     renderContacts();
     renderMessages([], "Unable to load modem messages");
     if (chatTitle) {
@@ -234,11 +521,21 @@ async function handleSendMessage() {
     await sendSms(number, text);
     messageInput.value = "";
     await refreshSMS();
-    await loadConversation(threadId);
+    await loadConversation(threadId, {
+      showLoading: false,
+      preserveScroll: false,
+      autoScroll: true,
+      markReadIfAtBottom: true,
+    });
   } catch (error) {
     console.error("Failed to send SMS:", error);
     renderMessages([], `Send failed: ${String(error)}`);
-    await loadConversation(threadId);
+    await loadConversation(threadId, {
+      showLoading: false,
+      preserveScroll: true,
+      autoScroll: false,
+      markReadIfAtBottom: false,
+    });
   } finally {
     smsState.sending = false;
     setComposerEnabled(Boolean(smsState.selectedThreadId));
@@ -254,6 +551,19 @@ export function initSMS() {
   chatTitle = document.querySelector("#sms-chat-title");
   messageInput = document.querySelector("#sms-input");
   sendBtn = document.querySelector("#sms-send-btn");
+  newMessagesIndicator = document.createElement("button");
+  newMessagesIndicator.type = "button";
+  newMessagesIndicator.className = "sms-new-messages-indicator";
+  newMessagesIndicator.hidden = true;
+  newMessagesIndicator.addEventListener("click", () => {
+    if (!messagesArea) {
+      return;
+    }
+
+    messagesArea.scrollTop = messagesArea.scrollHeight;
+    markThreadAsRead(smsState.selectedThreadId, smsState.lastConversationMessages);
+  });
+  messagesArea?.parentElement?.appendChild(newMessagesIndicator);
 
   window.addEventListener("sidebar-item-click", (e) => {
     if (e.detail.label === "SMS") {
@@ -287,6 +597,13 @@ export function initSMS() {
   setComposerEnabled(false);
   renderContacts();
   renderMessages([], "Select a conversation to view messages");
+  updateSidebarUnreadBadge();
+
+  messagesArea?.addEventListener("scroll", () => {
+    if (isNearBottom() && smsState.selectedThreadId) {
+      markThreadAsRead(smsState.selectedThreadId, smsState.lastConversationMessages);
+    }
+  });
 
   sendBtn?.addEventListener("click", () => {
     void handleSendMessage();
