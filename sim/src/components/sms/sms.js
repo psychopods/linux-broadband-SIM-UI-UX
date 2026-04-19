@@ -403,7 +403,11 @@ async function loadConversation(threadId, options = {}) {
       autoScroll,
     });
 
-    if (markReadIfAtBottom && (autoScroll || wasNearBottom)) {
+    // Only mark as read if this is not the very first load (previousKey exists),
+    // or if the user explicitly triggered the load (e.g. clicked a thread).
+    // This prevents the badge from flashing in and immediately disappearing on startup.
+    const isInitialLoad = !previousKey || previousKey === "__loading__";
+    if (markReadIfAtBottom && !isInitialLoad && (autoScroll || wasNearBottom)) {
       markThreadAsRead(threadId, messages);
     } else if (incomingChanged && unreadIncoming > 0) {
       setNewMessagesIndicator(unreadIncoming);

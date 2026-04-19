@@ -28,8 +28,30 @@ export function setSidebarBadge(label, count) {
   }
 
   const normalizedCount = Math.max(0, Number(count) || 0);
-  badge.hidden = normalizedCount <= 0;
-  badge.textContent = normalizedCount > 99 ? "99+" : String(normalizedCount);
+  const isVisible = badge.classList.contains("badge-visible");
+
+  if (normalizedCount <= 0) {
+    if (isVisible) {
+      badge.classList.remove("badge-visible");
+      badge.classList.add("badge-hiding");
+      badge.addEventListener(
+        "animationend",
+        () => {
+          badge.classList.remove("badge-hiding");
+          badge.textContent = "";
+        },
+        { once: true }
+      );
+    }
+  } else {
+    badge.textContent = normalizedCount > 99 ? "99+" : String(normalizedCount);
+    if (!isVisible) {
+      badge.classList.remove("badge-hiding");
+      // Force reflow so animation restarts if badge was mid-hide
+      void badge.offsetWidth;
+      badge.classList.add("badge-visible");
+    }
+  }
 }
 
 export function setSidebarItemVisible(label, visible) {
