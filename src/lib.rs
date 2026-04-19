@@ -96,6 +96,16 @@ pub struct SmsMessage {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SimContact {
+    pub id: String,
+    pub name: String,
+    pub number: String,
+    pub storage: String,
+    pub index: u32,
+    pub last_message: Option<SmsMessage>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PhoneCapabilities {
     pub supported: bool,
     pub emergency_only: bool,
@@ -337,6 +347,19 @@ async fn modem_proxy(context: &ModemContext) -> Result<Proxy<'_>, String> {
     )
     .await
     .map_err(|e| format!("Failed to create modem proxy: {e}"))
+}
+
+async fn modem_command(
+    context: &ModemContext,
+    command: &str,
+    timeout_seconds: u32,
+) -> Result<String, String> {
+    let proxy = modem_proxy(context).await?;
+
+    proxy
+        .call("Command", &(command, timeout_seconds))
+        .await
+        .map_err(|e| format!("Failed to run modem command '{command}': {e}"))
 }
 
 async fn modem_3gpp_proxy(context: &ModemContext) -> Result<Proxy<'_>, String> {
@@ -605,6 +628,248 @@ fn sms_thread_id(number: &str) -> String {
     } else {
         trimmed.to_string()
     }
+}
+
+fn contact_display_name(name: &str, number: &str) -> String {
+    let trimmed_name = name.trim();
+    if !trimmed_name.is_empty() {
+        trimmed_name.to_string()
+    } else {
+        number.trim().to_string()
+    }
+}
+
+fn normalize_phone_lookup(number: &str) -> String {
+    let digits: String = number.chars().filter(|ch| ch.is_ascii_digit()).collect();
+    if digits.is_empty() {
+        number.trim().to_ascii_lowercase()
+    } else {
+        digits
+    }
+}
+
+fn phone_numbers_match(left: &str, right: &str) -> bool {
+    let left_normalized = normalize_phone_lookup(left);
+    let right_normalized = normalize_phone_lookup(right);
+
+    if left_normalized.is_empty() || right_normalized.is_empty() {
+        return false;
+    }
+
+    if left_normalized == right_normalized {
+        return true;
+    }
+
+    let (shorter, longer) = if left_normalized.len() <= right_normalized.len() {
+        (left_normalized.as_str(), right_normalized.as_str())
+    } else {
+        (right_normalized.as_str(), left_normalized.as_str())
+    };
+
+    shorter.len() >= 7 && longer.ends_with(shorter)
+}
+
+fn decode_possible_ucs2(value: &str) -> String {
+    let trimmed = value.trim();
+    if trimmed.len() < 4 || trimmed.len() % 4 != 0 || !trimmed.chars().all(|ch| ch.is_ascii_hexdigit()) {
+        return trimmed.to_string();
+    }
+
+    let mut code_units = Vec::with_capacity(trimmed.len() / 4);
+    for chunk in trimmed.as_bytes().chunks(4) {
+        let Ok(chunk_str) = std::str::from_utf8(chunk) else {
+            return trimmed.to_string();
+        };
+        let Ok(code_unit) = u16::from_str_radix(chunk_str, 16) else {
+            return trimmed.to_string();
+        };
+        code_units.push(code_unit);
+    }
+
+    String::from_utf16(&code_units).unwrap_or_else(|_| trimmed.to_string())
+}
+
+fn extract_quoted_fields(input: &str) -> Vec<String> {
+    let mut fields = Vec::new();
+    let mut current = String::new();
+    let mut in_quotes = false;
+
+    for ch in input.chars() {
+        match ch {
+            '"' => {
+                if in_quotes {
+                    fields.push(current.clone());
+                    current.clear();
+                }
+                in_quotes = !in_quotes;
+            }
+            _ if in_quotes => current.push(ch),
+            _ => {}
+        }
+    }
+
+    fields
+}
+
+fn parse_cpbs_usage(response: &str) -> Option<(u32, u32)> {
+    response.lines().find_map(|line| {
+        let trimmed = line.trim();
+        if !trimmed.starts_with("+CPBS:") {
+            return None;
+        }
+
+        let parts: Vec<_> = trimmed.split(',').map(str::trim).collect();
+        if parts.len() < 3 {
+            return None;
+        }
+
+        let used = parts.get(parts.len().saturating_sub(2))?.parse().ok()?;
+        let total = parts.last()?.parse().ok()?;
+        Some((used, total))
+    })
+}
+
+fn parse_cpbr_range(response: &str) -> Option<(u32, u32)> {
+    response.lines().find_map(|line| {
+        let trimmed = line.trim();
+        if !trimmed.starts_with("+CPBR:") {
+            return None;
+        }
+
+        let start_paren = trimmed.find('(')?;
+        let end_paren = trimmed[start_paren + 1..].find(')')? + start_paren + 1;
+        let range = &trimmed[start_paren + 1..end_paren];
+        let (start, end) = range.split_once('-')?;
+
+        Some((start.trim().parse().ok()?, end.trim().parse().ok()?))
+    })
+}
+
+fn parse_cpbr_entries(response: &str, storage: &str, messages: &[SmsMessage]) -> Vec<SimContact> {
+    let mut contacts = Vec::new();
+
+    for line in response.lines() {
+        let trimmed = line.trim();
+        if !trimmed.starts_with("+CPBR:") {
+            continue;
+        }
+
+        let Some(payload) = trimmed.split_once(':').map(|(_, value)| value.trim()) else {
+            continue;
+        };
+        let Some((index_part, _)) = payload.split_once(',') else {
+            continue;
+        };
+        let Ok(index) = index_part.trim().parse::<u32>() else {
+            continue;
+        };
+
+        let quoted_fields = extract_quoted_fields(payload);
+        let number = quoted_fields.first().cloned().unwrap_or_default().trim().to_string();
+        if number.is_empty() {
+            continue;
+        }
+
+        let raw_name = quoted_fields.get(1).cloned().unwrap_or_default();
+        let name = decode_possible_ucs2(&raw_name);
+        let last_message = messages
+            .iter()
+            .filter(|message| phone_numbers_match(&message.peer, &number))
+            .max_by(|left, right| {
+                left.timestamp
+                    .as_deref()
+                    .unwrap_or("")
+                    .cmp(right.timestamp.as_deref().unwrap_or(""))
+                    .then_with(|| left.path.cmp(&right.path))
+            })
+            .cloned();
+
+        contacts.push(SimContact {
+            id: format!("{storage}:{index}"),
+            name: contact_display_name(&name, &number),
+            number,
+            storage: storage.to_string(),
+            index,
+            last_message,
+        });
+    }
+
+    contacts
+}
+
+async fn read_sim_contacts(context: &ModemContext) -> Result<Vec<SimContact>, String> {
+    if context.sim_path.is_none() {
+        return Err("No SIM object is exposed by the modem".to_string());
+    }
+
+    let modem = modem_proxy(context).await?;
+    let unlock_required = get_unlock_required_from_proxy(&modem).await.unwrap_or(0);
+    if !matches!(unlock_required, 0 | 1) {
+        return Err("SIM must be unlocked before contacts can be read".to_string());
+    }
+
+    let storage = "SM";
+    let messages = list_sms_messages(context).await.unwrap_or_default();
+
+    modem_command(context, &format!("AT+CPBS=\"{storage}\""), 10)
+        .await
+        .map_err(|error| {
+            format!(
+                "Failed to select SIM phonebook storage '{storage}'. The modem may not expose SIM contacts via AT commands: {error}"
+            )
+        })?;
+
+    let usage_response = modem_command(context, "AT+CPBS?", 10).await?;
+    let (used, total) = parse_cpbs_usage(&usage_response)
+        .ok_or_else(|| format!("Unable to parse SIM phonebook usage from modem reply: {usage_response}"))?;
+
+    if used == 0 || total == 0 {
+        return Ok(Vec::new());
+    }
+
+    let (range_start, range_end) = match modem_command(context, "AT+CPBR=?", 10).await {
+        Ok(range_response) => parse_cpbr_range(&range_response).unwrap_or((1, total.max(used))),
+        Err(_) => (1, total.max(used)),
+    };
+
+    let mut contacts = Vec::new();
+    let mut current = range_start.max(1);
+    while current <= range_end {
+        let chunk_end = (current + 19).min(range_end);
+        let chunk_command = if current == chunk_end {
+            format!("AT+CPBR={current}")
+        } else {
+            format!("AT+CPBR={current},{chunk_end}")
+        };
+
+        match modem_command(context, &chunk_command, 20).await {
+            Ok(reply) => contacts.extend(parse_cpbr_entries(&reply, storage, &messages)),
+            Err(_) if current != chunk_end => {
+                for index in current..=chunk_end {
+                    let single_command = format!("AT+CPBR={index}");
+                    if let Ok(reply) = modem_command(context, &single_command, 10).await {
+                        contacts.extend(parse_cpbr_entries(&reply, storage, &messages));
+                    }
+                }
+            }
+            Err(_) => {}
+        }
+
+        current = chunk_end.saturating_add(1);
+    }
+
+    contacts.sort_by(|left, right| {
+        left.name
+            .to_ascii_lowercase()
+            .cmp(&right.name.to_ascii_lowercase())
+            .then_with(|| left.number.cmp(&right.number))
+            .then_with(|| left.index.cmp(&right.index))
+    });
+    contacts.dedup_by(|left, right| {
+        left.name.eq_ignore_ascii_case(&right.name) && phone_numbers_match(&left.number, &right.number)
+    });
+
+    Ok(contacts)
 }
 
 fn sms_state_label(state: u32) -> &'static str {
@@ -1221,6 +1486,11 @@ pub async fn get_sms_threads() -> Result<Vec<SmsThread>, String> {
     });
 
     Ok(threads)
+}
+
+pub async fn get_sim_contacts() -> Result<Vec<SimContact>, String> {
+    let context = connect_to_modem().await?;
+    read_sim_contacts(&context).await
 }
 
 pub async fn get_sms_conversation(thread_id: String) -> Result<Vec<SmsMessage>, String> {

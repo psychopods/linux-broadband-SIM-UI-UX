@@ -23,43 +23,55 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
-function getAvatarLetter(peer) {
-  const trimmed = (peer || "").trim();
+function getAvatarLetter(label) {
+  const trimmed = (label || "").trim();
   if (!trimmed) return "?";
-  // Use first digit/letter that isn't + or space
   const match = trimmed.match(/[a-zA-Z0-9]/);
   return match ? match[0].toUpperCase() : trimmed[0];
 }
 
-// Hue derived from peer string so each contact gets a stable colour
-function getPeerHue(peer) {
+function getContactLabel(contact) {
+  return String(contact?.name || contact?.number || "").trim();
+}
+
+function getContactNumber(contact) {
+  return String(contact?.number || "").trim();
+}
+
+function getContactLastMessage(contact) {
+  return String(contact?.last_message?.text || "");
+}
+
+// Hue derived from contact identity so each contact gets a stable colour
+function getPeerHue(identity) {
   let hash = 0;
-  for (let i = 0; i < peer.length; i++) {
-    hash = (hash * 31 + peer.charCodeAt(i)) & 0xffffffff;
+  for (let i = 0; i < identity.length; i++) {
+    hash = (hash * 31 + identity.charCodeAt(i)) & 0xffffffff;
   }
   return ((hash >>> 0) % 360);
 }
 
-function avatarStyle(peer) {
-  const hue = getPeerHue(peer);
+function avatarStyle(identity) {
+  const hue = getPeerHue(identity);
   return `background: hsl(${hue}, 40%, 88%); border-color: hsl(${hue}, 45%, 70%);`;
 }
 
-function letterStyle(peer) {
-  const hue = getPeerHue(peer);
+function letterStyle(identity) {
+  const hue = getPeerHue(identity);
   return `color: hsl(${hue}, 55%, 35%);`;
 }
 
-function getFilteredThreads(threads) {
+function getFilteredThreads(contacts) {
   const normalizedQuery = searchQuery.trim().toLowerCase();
   if (!normalizedQuery) {
-    return threads;
+    return contacts;
   }
 
-  return threads.filter((thread) => {
-    const peer = String(thread.peer || "").toLowerCase();
-    const lastMessage = String(thread.last_message?.text || "").toLowerCase();
-    return peer.includes(normalizedQuery) || lastMessage.includes(normalizedQuery);
+  return contacts.filter((contact) => {
+    const name = getContactLabel(contact).toLowerCase();
+    const number = getContactNumber(contact).toLowerCase();
+    const lastMessage = getContactLastMessage(contact).toLowerCase();
+    return name.includes(normalizedQuery) || number.includes(normalizedQuery) || lastMessage.includes(normalizedQuery);
   });
 }
 
@@ -70,7 +82,7 @@ function syncSelection(filteredThreads) {
 
   const selectedThread = filteredThreads.find((thread) => thread.id === selectedContactId);
   if (selectedThread) {
-    showDetailCard(selectedThread.peer, selectedThread);
+    showDetailCard(selectedThread);
     return;
   }
 
@@ -83,23 +95,23 @@ function syncSelection(filteredThreads) {
 
 // ── Render ─────────────────────────────────────────────────────────────────
 
-function renderGrid(threads) {
+function renderGrid(contacts) {
   if (!contactsGrid) return;
 
-  const filteredThreads = getFilteredThreads(threads);
+  const filteredThreads = getFilteredThreads(contacts);
   syncSelection(filteredThreads);
 
-  if (!threads || threads.length === 0) {
+  if (!contacts || contacts.length === 0) {
     contactsGrid.innerHTML = '<div class="contacts-placeholder">No contacts found</div>';
     if (contactsCount) contactsCount.textContent = "";
     return;
   }
 
   if (contactsCount) {
-    const totalLabel = `${threads.length} contact${threads.length !== 1 ? "s" : ""}`;
-    contactsCount.textContent = filteredThreads.length === threads.length
+    const totalLabel = `${contacts.length} contact${contacts.length !== 1 ? "s" : ""}`;
+    contactsCount.textContent = filteredThreads.length === contacts.length
       ? totalLabel
-      : `${filteredThreads.length} of ${threads.length}`;
+      : `${filteredThreads.length} of ${contacts.length}`;
   }
 
   if (filteredThreads.length === 0) {
@@ -108,22 +120,24 @@ function renderGrid(threads) {
   }
 
   contactsGrid.innerHTML = filteredThreads
-    .map((thread) => {
-      const letter = getAvatarLetter(thread.peer);
-      const selected = thread.id === selectedContactId ? " selected" : "";
+    .map((contact) => {
+      const label = getContactLabel(contact);
+      const number = getContactNumber(contact);
+      const identity = `${label}|${number}|${contact.id}`;
+      const letter = getAvatarLetter(label || number);
+      const selected = contact.id === selectedContactId ? " selected" : "";
       return `
         <button
           class="contact-card${selected}"
           type="button"
-          data-thread-id="${escapeHtml(thread.id)}"
-          data-peer="${escapeHtml(thread.peer)}"
-          aria-pressed="${thread.id === selectedContactId}"
-          title="${escapeHtml(thread.peer)}"
+          data-contact-id="${escapeHtml(contact.id)}"
+          aria-pressed="${contact.id === selectedContactId}"
+          title="${escapeHtml(label || number)}"
         >
-          <div class="contact-avatar" style="${avatarStyle(thread.peer)}">
-            <span class="contact-avatar-letter" style="${letterStyle(thread.peer)}">${escapeHtml(letter)}</span>
+          <div class="contact-avatar" style="${avatarStyle(identity)}">
+            <span class="contact-avatar-letter" style="${letterStyle(identity)}">${escapeHtml(letter)}</span>
           </div>
-          <span class="contact-name-label">${escapeHtml(thread.peer)}</span>
+          <span class="contact-name-label">${escapeHtml(label || number)}</span>
         </button>
       `;
     })
@@ -131,33 +145,34 @@ function renderGrid(threads) {
 
   contactsGrid.querySelectorAll(".contact-card").forEach((card) => {
     card.addEventListener("click", () => {
-      const threadId = card.getAttribute("data-thread-id") || "";
-      const peer = card.getAttribute("data-peer") || "";
-      const thread = (window._contactsThreads || []).find((t) => t.id === threadId);
-      selectContact(threadId, peer, thread);
+      const contactId = card.getAttribute("data-contact-id") || "";
+      const contact = allContacts.find((item) => item.id === contactId);
+      selectContact(contactId, contact);
     });
   });
 }
 
-function selectContact(threadId, peer, thread) {
-  selectedContactId = threadId;
+function selectContact(contactId, contact) {
+  selectedContactId = contactId;
 
-  // Update selection highlight
   contactsGrid?.querySelectorAll(".contact-card").forEach((card) => {
-    const isSelected = card.getAttribute("data-thread-id") === threadId;
+    const isSelected = card.getAttribute("data-contact-id") === contactId;
     card.classList.toggle("selected", isSelected);
     card.setAttribute("aria-pressed", String(isSelected));
   });
 
-  showDetailCard(peer, thread);
+  if (contact) {
+    showDetailCard(contact);
+  }
 }
 
-function showDetailCard(peer, thread) {
+function showDetailCard(contact) {
   if (!detailCard || !detailEmpty) return;
 
-  // Avatar
-  const letter = getAvatarLetter(peer);
-  const hue = getPeerHue(peer);
+  const label = getContactLabel(contact);
+  const number = getContactNumber(contact);
+  const letter = getAvatarLetter(label || number);
+  const hue = getPeerHue(`${label}|${number}|${contact?.id || ""}`);
   detailAvatar.style.cssText = `
     background: hsl(${hue}, 40%, 88%);
     border-color: hsl(${hue}, 55%, 60%);
@@ -165,19 +180,11 @@ function showDetailCard(peer, thread) {
   `;
   detailAvatar.innerHTML = `<span class="contacts-detail-avatar-letter" style="color: hsl(${hue}, 55%, 32%);">${escapeHtml(letter)}</span>`;
 
-  // Name / number — if peer looks like a phone number show it as number only
-  const looksLikeNumber = /^[\d\s\+\-\(\)]{5,}$/.test(peer.trim());
-  if (looksLikeNumber) {
-    detailName.textContent = peer;
-    detailNumber.textContent = "";
-  } else {
-    detailName.textContent = peer;
-    detailNumber.textContent = "";
-  }
+  detailName.textContent = label || number || "Unknown contact";
+  detailNumber.textContent = number || "No number stored";
 
-  // Last message
-  const lastText = thread?.last_message?.text?.trim();
-  const isIncoming = thread?.last_message?.incoming;
+  const lastText = contact?.last_message?.text?.trim();
+  const isIncoming = contact?.last_message?.incoming;
   if (lastText) {
     const dir = isIncoming ? "Received" : "Sent";
     detailLastMsg.innerHTML = `
@@ -197,17 +204,15 @@ export async function refreshContacts() {
   if (!contactsTab || contactsTab.style.display === "none") return;
 
   try {
-    const { getSmsThreads } = await import("../../tauri-api.js");
-    const threads = await getSmsThreads();
-    allContacts = Array.isArray(threads) ? threads : [];
-    window._contactsThreads = allContacts;
+    const { getSimContacts } = await import("../../tauri-api.js");
+    const contacts = await getSimContacts();
+    allContacts = Array.isArray(contacts) ? contacts : [];
     renderGrid(allContacts);
 
-    // If a contact was already selected, refresh its detail panel too
     if (selectedContactId) {
-      const thread = allContacts.find((t) => t.id === selectedContactId);
-      if (thread) {
-        showDetailCard(thread.peer, thread);
+      const contact = allContacts.find((item) => item.id === selectedContactId);
+      if (contact) {
+        showDetailCard(contact);
       }
     }
   } catch (err) {

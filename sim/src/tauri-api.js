@@ -140,6 +140,15 @@ export async function getSmsThreads() {
   }
 }
 
+export async function getSimContacts() {
+  try {
+    return await getInvoke()("get_sim_contacts");
+  } catch (error) {
+    console.error("Failed to get SIM contacts:", error);
+    return [];
+  }
+}
+
 export async function getSmsConversation(threadId) {
   try {
     return await getInvoke()("get_sms_conversation", {

@@ -1,6 +1,7 @@
 use sim_broadband_gui::{
     answer_phone_call as answer_modem_phone_call, cancel_ussd, connect_network,
     disconnect_network, get_all_modem_data, get_connection_status, get_current_bearer_details,
+    get_sim_contacts as fetch_sim_contacts,
     get_network_controls, get_operator_name, get_phone_status as fetch_phone_status,
     get_radio_tech, get_registration_state, get_roaming_state, get_signal_strength, get_sim_info,
     get_sim_management, get_sms_conversation as fetch_sms_conversation,
@@ -8,7 +9,8 @@ use sim_broadband_gui::{
     hangup_phone_call as hangup_modem_phone_call, initiate_ussd as send_ussd_request,
     respond_to_ussd as send_ussd_response, send_phone_dtmf as send_modem_dtmf,
     send_sms as send_modem_sms, start_phone_call as start_modem_phone_call, unlock_sim_pin,
-    BearerDetails, ModemData, NetworkControls, PhoneStatus, SimManagement, SmsMessage, SmsThread,
+    BearerDetails, ModemData, NetworkControls, PhoneStatus, SimContact, SimManagement, SmsMessage,
+    SmsThread,
     UssdSession,
 };
 
@@ -90,6 +92,11 @@ async fn get_sms_threads() -> Result<Vec<SmsThread>, String> {
 }
 
 #[tauri::command]
+async fn get_sim_contacts() -> Result<Vec<SimContact>, String> {
+    fetch_sim_contacts().await
+}
+
+#[tauri::command]
 async fn get_sms_conversation(thread_id: String) -> Result<Vec<SmsMessage>, String> {
     fetch_sms_conversation(thread_id).await
 }
@@ -164,6 +171,7 @@ pub fn run() {
             get_roaming,
             get_current_bearer,
             get_sms_threads,
+            get_sim_contacts,
             get_sms_conversation,
             send_sms,
             get_ussd_status,
