@@ -10,6 +10,8 @@ const ussdState = {
   shortcuts: [],
   loading: false,
   session: null,
+  visible: false,
+  pollTimer: null,
 };
 
 let ussdTab;
@@ -96,6 +98,10 @@ function hasVisibleSessionContent(session) {
   );
 }
 
+function isReplyRequired(session = ussdState.session) {
+  return session?.state === "User response required";
+}
+
 function normalizeSession(session) {
   if (!session) {
     return ussdState.session;
@@ -124,19 +130,58 @@ function normalizeSession(session) {
   return session;
 }
 
+function shouldApplyIncomingSession(session, options = {}) {
+  if (!session) {
+    return false;
+  }
+
+  if (options.force) {
+    return true;
+  }
+
+  if (isReplyRequired() && !hasVisibleSessionContent(session)) {
+    return false;
+  }
+
+  return true;
+}
+
 async function loadShortcuts() {
   ussdState.shortcuts = await getUssdShortcuts();
   renderShortcuts();
 }
 
-export async function refreshUSSD() {
+export async function refreshUSSD(options = {}) {
   try {
-    const session = normalizeSession(await getUssdStatus());
+    const nextSession = await getUssdStatus();
+    if (!shouldApplyIncomingSession(nextSession, options)) {
+      return;
+    }
+
+    const session = normalizeSession(nextSession);
     ussdState.session = session;
     renderSession(session);
   } catch (error) {
     console.error("Failed to refresh USSD state:", error);
   }
+}
+
+function stopUssdPolling() {
+  if (ussdState.pollTimer) {
+    window.clearInterval(ussdState.pollTimer);
+    ussdState.pollTimer = null;
+  }
+}
+
+function startUssdPolling(intervalMs = 3000) {
+  stopUssdPolling();
+  ussdState.pollTimer = window.setInterval(() => {
+    if (!ussdState.visible || ussdState.loading || isReplyRequired()) {
+      return;
+    }
+
+    void refreshUSSD();
+  }, intervalMs);
 }
 
 async function handleExecute() {
@@ -179,7 +224,7 @@ async function handleCancel() {
     await cancelUssdSession();
     ussdState.session = null;
     responseInput.value = "";
-    await refreshUSSD();
+    await refreshUSSD({ force: true });
     setFeedback("USSD session cancelled");
   } catch (error) {
     console.error("Failed to cancel USSD:", error);
@@ -227,6 +272,7 @@ export function initUSSD() {
 
   window.addEventListener("sidebar-item-click", (e) => {
     if (e.detail.label === "USSD dialpad") {
+      ussdState.visible = true;
       if (ussdTab) {
         ussdTab.style.display = "flex";
       }
@@ -246,9 +292,12 @@ export function initUSSD() {
         contentShell.classList.remove("network-active");
       }
 
-      void refreshUSSD();
+      startUssdPolling();
+      void refreshUSSD({ force: true });
     } else if (ussdTab) {
+      ussdState.visible = false;
       ussdTab.style.display = "none";
+      stopUssdPolling();
 
       if (contentShell) {
         contentShell.classList.remove("ussd-active");
@@ -257,5 +306,5 @@ export function initUSSD() {
   });
 
   void loadShortcuts();
-  void refreshUSSD();
+  void refreshUSSD({ force: true });
 }

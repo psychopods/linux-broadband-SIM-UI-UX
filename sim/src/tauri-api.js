@@ -204,7 +204,6 @@ export async function updateAllModemData() {
     "./components/network/network.js"
   );
   const { refreshSMS } = await import("./components/sms/sms.js");
-  const { refreshUSSD } = await import("./components/ussd/ussd.js");
 
   try {
     const modemData = await getModemData();
@@ -226,7 +225,6 @@ export async function updateAllModemData() {
     setSimInfo(modemData.sim_info);
     renderNetworkControls(networkControls);
     await refreshSMS();
-    await refreshUSSD();
 
     console.log("Updated UI with real modem data:", modemData, networkControls);
   } catch (error) {
@@ -234,7 +232,6 @@ export async function updateAllModemData() {
     setTopbarUnavailable();
     setNetworkPanelUnavailable();
     await refreshSMS();
-    await refreshUSSD();
   }
 }
 
