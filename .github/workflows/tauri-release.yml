@@ -79,7 +79,7 @@ jobs:
             "notes": "Release ${GITHUB_REF_NAME}",
             "pub_date": "${PUB_DATE}",
             "platforms": {
-              "linux-x86_64-appimage": {
+              "linux-x86_64": {
                 "signature": "${SIG_CONTENT}",
                 "url": "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${APPIMAGE_NAME}"
               }
