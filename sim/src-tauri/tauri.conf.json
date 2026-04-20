@@ -37,7 +37,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMzNTYxREU2NEM3NkQ3QTYKUldTbTEzWk01aDFXdzkzTUVMVEpDVDZZSzkraUtRQytaUFRsMzJnSjdmVlhjY21JTGxXMmNSQTUK",
       "endpoints": [
         "https://github.com/psychopods/linux-broadband-SIM-UI-UX/releases/latest/download/latest.json"
       ]
