@@ -1,3 +1,7 @@
+import { checkAppUpdate, checkRuntimePermissions, getAppMetadata, installAppUpdate } from "../../tauri-api.js";
+
+let topbarInitialized = false;
+
 function normalizeRadioTech(tech) {
   const allowed = new Set(["2G", "3G", "4G", "5G", "LTE", "UNKNOWN"]);
   const upper = (tech || "Unknown").toUpperCase();
@@ -155,7 +159,94 @@ function setTopbarUnavailable() {
   setSimInfo("Unavailable");
 }
 
+async function refreshSettingsMeta() {
+  const metaEl = document.querySelector("#settings-meta");
+  if (!metaEl) {
+    return;
+  }
+
+  const update = await checkAppUpdate();
+  if (update.update_available) {
+    metaEl.textContent = `Update ${update.latest_version || "available"}`;
+    return;
+  }
+
+  const metadata = await getAppMetadata();
+  metaEl.textContent = metadata?.version ? `v${metadata.version}` : "About & updates";
+}
+
+async function handleSettingsClick() {
+  const metadata = await getAppMetadata();
+  const update = await checkAppUpdate();
+  const permissions = await checkRuntimePermissions();
+
+  const title = metadata?.product_name || "SIM Broadband Manager";
+  const version = metadata?.version || update.current_version || "unknown";
+  const description = metadata?.description || "No description available";
+  const permissionHint = permissions.ready_for_appimage_modem_access
+    ? "Modem permissions look ready for AppImage use."
+    : permissions.recommendation || "Modem permissions may require dialout membership.";
+
+  if (update.update_available) {
+    const body = update.body ? `\n\nRelease notes:\n${update.body}` : "";
+    const configuredHint = update.configured
+      ? "Choose OK to download and install the update now."
+      : "Updater is not fully configured in this build, so install is unavailable.";
+
+    if (
+      update.configured &&
+      window.confirm(
+        `${title}\nVersion: ${version}\nLatest: ${update.latest_version || "newer version"}\n\n${description}\n\n${permissionHint}${body}\n\n${configuredHint}`
+      )
+    ) {
+      const button = document.querySelector("#settings-button");
+      const metaEl = document.querySelector("#settings-meta");
+      if (button) {
+        button.disabled = true;
+      }
+      if (metaEl) {
+        metaEl.textContent = "Installing update...";
+      }
+
+      try {
+        await installAppUpdate();
+      } catch (error) {
+        window.alert(`Update failed: ${error}`);
+        if (button) {
+          button.disabled = false;
+        }
+        await refreshSettingsMeta();
+      }
+      return;
+    }
+
+    window.alert(
+      `${title}\nVersion: ${version}\nLatest: ${update.latest_version || "newer version"}\n\n${description}\n\n${permissionHint}${body}\n\n${configuredHint}`
+    );
+    return;
+  }
+
+  const note = update.note ? `\n\nUpdate status: ${update.note}` : "";
+  window.alert(`${title}\nVersion: ${version}\n\n${description}\n\n${permissionHint}${note}`);
+}
+
+function initTopbar() {
+  if (topbarInitialized) {
+    return;
+  }
+
+  topbarInitialized = true;
+
+  const settingsButton = document.querySelector("#settings-button");
+  settingsButton?.addEventListener("click", () => {
+    void handleSettingsClick();
+  });
+
+  void refreshSettingsMeta();
+}
+
 export {
+  initTopbar,
   setInternetStatus,
   setNetworkProvider,
   setNetworkSignal,

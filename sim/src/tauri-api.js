@@ -221,6 +221,52 @@ export async function sendPhoneDtmf(tones) {
   });
 }
 
+export async function getAppMetadata() {
+  try {
+    return await getInvoke()("get_app_metadata");
+  } catch (error) {
+    console.error("Failed to get app metadata:", error);
+    return null;
+  }
+}
+
+export async function checkAppUpdate() {
+  try {
+    return await getInvoke()("check_app_update");
+  } catch (error) {
+    console.error("Failed to check for app updates:", error);
+    return {
+      current_version: "unknown",
+      latest_version: null,
+      update_available: false,
+      release_url: null,
+      body: null,
+      configured: false,
+      note: String(error),
+    };
+  }
+}
+
+export async function installAppUpdate() {
+  return await getInvoke()("install_app_update");
+}
+
+export async function checkRuntimePermissions() {
+  try {
+    return await getInvoke()("check_runtime_permissions");
+  } catch (error) {
+    console.error("Failed to check runtime permissions:", error);
+    return {
+      dialout_member: false,
+      plugdev_member: false,
+      groups: [],
+      dbus_modemmanager_access: false,
+      ready_for_appimage_modem_access: false,
+      recommendation: "Unable to verify modem permissions. Ensure dialout membership and D-Bus access.",
+    };
+  }
+}
+
 /**
  * Fetch and update all topbar widgets with real data
  * This is the main entry point for hydrating the UI with backend data

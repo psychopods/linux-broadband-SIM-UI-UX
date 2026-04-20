@@ -1,4 +1,5 @@
 import {
+  initTopbar,
   setTopbarLoading,
 } from "./components/topbar/topbar.js";
 import { initSidebar } from "./components/sidebar/sidebar.js";
@@ -7,7 +8,7 @@ import { initSMS } from "./components/sms/sms.js";
 import { initUSSD } from "./components/ussd/ussd.js";
 import { initPhone } from "./components/phone/phone.js";
 import { initContacts } from "./components/contacts/contacts.js";
-import { startModemPolling } from "./tauri-api.js";
+import { checkRuntimePermissions, startModemPolling } from "./tauri-api.js";
 
 // Component loading function
 async function loadComponent(componentPath, mountId) {
@@ -43,6 +44,7 @@ async function initializeApp() {
   ]);
 
   // Initialize components
+  initTopbar();
   initSidebar();
   initNetworkPanel();
   initSMS();
@@ -52,6 +54,15 @@ async function initializeApp() {
 
   // Render immediately with an honest loading state, then hydrate from backend.
   setTopbarLoading();
+
+  // AppImage/desktop runtime check for ModemManager access via D-Bus.
+  const runtimePermissions = await checkRuntimePermissions();
+  if (!runtimePermissions.ready_for_appimage_modem_access) {
+    console.warn(
+      "Permission check: modem access may fail. Ensure your user is in 'dialout' (or 'plugdev' on some systems) and re-login.",
+      runtimePermissions
+    );
+  }
 
   // Fetch real modem data from backend and update UI.
   startModemPolling(5000);

@@ -83,7 +83,8 @@ button.topbar-item {
 .status-meta,
 .provider-meta,
 .signal-meta,
-.sim-meta {
+.sim-meta,
+.settings-copy {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -92,12 +93,23 @@ button.topbar-item {
 .status-label,
 .provider-label,
 .signal-label,
-.sim-label {
+.sim-label,
+.settings-label {
   font-size: clamp(0.62rem, 0.85vw, 0.75rem);
   font-weight: 600;
   letter-spacing: 0.03em;
   color: var(--muted);
   text-transform: uppercase;
+}
+
+.settings-meta {
+  font-size: clamp(0.72rem, 1vw, 0.84rem);
+  font-weight: 700;
+  color: #1a3d62;
+}
+
+.topbar-item-settings {
+  min-width: clamp(140px, 16vw, 180px);
 }
 
 .status-values {
@@ -182,6 +194,7 @@ button.topbar-item {
 }
 
 @media (max-width: 900px) {
+  .topbar-item-settings .settings-copy,
   .topbar-item-status .status-meta,
   .topbar-item-provider .provider-meta,
   .topbar-item-signal .signal-meta,
