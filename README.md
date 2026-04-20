@@ -8,6 +8,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and pull 
 
 See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community participation and behavior expectations.
 
+See [SECURITY.md](SECURITY.md) for vulnerability reporting and supported version policy.
+
 ---
 
 ## Features
