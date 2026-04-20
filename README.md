@@ -4,6 +4,10 @@ A Linux desktop application for managing mobile broadband SIM modems. Monitor co
 
 Built with [Tauri 2](https://tauri.app/) (Rust + WebKit2GTK) and powered by [ModemManager](https://modemmanager.org/) over D-Bus.
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and pull request guidelines.
+
+See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community participation and behavior expectations.
+
 ---
 
 ## Features
@@ -49,7 +53,7 @@ sudo snap install sim-broadband-manager
 ## Requirements
 
 | Requirement | Details |
-|---|---|
+| --- | --- |
 | OS | Linux (Ubuntu 22.04+ / Debian 12+ / Linux Mint 21+) |
 | ModemManager | ≥ 1.18 |
 | D-Bus | System bus access to `org.freedesktop.ModemManager1` |
@@ -99,7 +103,7 @@ The AppImage and `.deb` will be output to `sim/src-tauri/target/release/bundle/`
 ## Tech Stack
 
 | Layer | Technology |
-|---|---|
+| --- | --- |
 | UI | HTML / CSS / JavaScript (vanilla) |
 | Desktop shell | Tauri 2 (Rust) |
 | Modem backend | ModemManager via zbus (D-Bus) |
