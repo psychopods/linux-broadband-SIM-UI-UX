@@ -205,7 +205,6 @@ async fn check_app_update(app: tauri::AppHandle) -> Result<AppUpdateStatus, Stri
     }
 
     let current_version = env!("CARGO_PKG_VERSION").to_string();
-    let configured = updater_public_key().is_some();
     let endpoint = Url::parse(UPDATER_ENDPOINT)
         .map_err(|error| format!("Invalid updater endpoint URL: {error}"))?;
 
@@ -218,9 +217,22 @@ async fn check_app_update(app: tauri::AppHandle) -> Result<AppUpdateStatus, Stri
         updater_builder = updater_builder.pubkey(pubkey);
     }
 
-    let updater = updater_builder
-        .build()
-        .map_err(|error| format!("Failed to build updater: {error}"))?;
+    let updater = match updater_builder.build() {
+        Ok(updater) => updater,
+        Err(error) => {
+            return Ok(AppUpdateStatus {
+                current_version,
+                latest_version: None,
+                update_available: false,
+                release_url: None,
+                body: None,
+                configured: false,
+                note: Some(format!("Failed to build updater: {error}")),
+            });
+        }
+    };
+
+    let configured = true;
 
     match updater.check().await {
         Ok(Some(update)) => Ok(AppUpdateStatus {
@@ -263,20 +275,23 @@ async fn check_app_update(app: tauri::AppHandle) -> Result<AppUpdateStatus, Stri
 
 #[tauri::command]
 async fn install_app_update(app: tauri::AppHandle) -> Result<(), String> {
-    let pubkey = option_env!("TAURI_UPDATER_PUBLIC_KEY")
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| "Updater is not configured in this build. Missing TAURI_UPDATER_PUBLIC_KEY.".to_string())?
-        .to_string();
-
     let endpoint = Url::parse(UPDATER_ENDPOINT)
         .map_err(|error| format!("Invalid updater endpoint URL: {error}"))?;
 
-    let updater = app
+    let mut updater_builder = app
         .updater_builder()
-        .pubkey(pubkey)
         .endpoints(vec![endpoint])
-        .map_err(|error| format!("Failed to configure updater endpoints: {error}"))?
+        .map_err(|error| format!("Failed to configure updater endpoints: {error}"))?;
+
+    if let Some(pubkey) = option_env!("TAURI_UPDATER_PUBLIC_KEY")
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string)
+    {
+        updater_builder = updater_builder.pubkey(pubkey);
+    }
+
+    let updater = updater_builder
         .build()
         .map_err(|error| format!("Failed to build updater: {error}"))?;
 
