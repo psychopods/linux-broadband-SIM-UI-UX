@@ -95,3 +95,20 @@ jobs:
             sim/src-tauri/target/release/bundle/appimage/*.sig
             sim/src-tauri/target/release/bundle/deb/*.deb
             sim/src-tauri/target/release/updater/latest.json
+
+  build-snap:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build snap
+        uses: snapcore/action-build@v1
+
+      - name: Upload snap to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            *.snap
