@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability report
+    url: https://github.com/psychopods/linux-broadband-SIM-UI-UX/security
+    about: Use the repository security page or the security policy for private vulnerability reporting.
+  - name: Security policy
+    url: https://github.com/psychopods/linux-broadband-SIM-UI-UX/blob/main/SECURITY.md
+    about: Read the repository security policy before reporting a vulnerability.
