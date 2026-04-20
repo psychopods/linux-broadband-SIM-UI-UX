@@ -279,15 +279,19 @@ export async function updateAllModemData() {
     "./components/network/network.js"
   );
   const { refreshSMS } = await import("./components/sms/sms.js");
-  const { refreshPhoneStatus, applyPhoneCapabilities } = await import("./components/phone/phone.js");
+  const { refreshPhoneStatus } = await import("./components/phone/phone.js");
 
   try {
-    const modemData = await getModemData();
-    const networkControls = await getNetworkControls();
+    const [modemData, networkControls, phoneStatus] = await Promise.all([
+      getModemData(),
+      getNetworkControls(),
+      getPhoneStatus(),
+    ]);
 
     if (!modemData) {
       setTopbarUnavailable();
       setNetworkPanelUnavailable();
+      await refreshPhoneStatus(phoneStatus);
       return;
     }
 
@@ -300,8 +304,7 @@ export async function updateAllModemData() {
     setNetworkSignal(modemData.signal_strength);
     setSimInfo(modemData.sim_info);
     renderNetworkControls(networkControls);
-    applyPhoneCapabilities(modemData.phone_capabilities);
-    await refreshPhoneStatus();
+    await refreshPhoneStatus(phoneStatus);
     await refreshSMS();
 
     console.log("Updated UI with real modem data:", modemData, networkControls);
@@ -309,7 +312,6 @@ export async function updateAllModemData() {
     console.error("Failed to update modem data:", error);
     setTopbarUnavailable();
     setNetworkPanelUnavailable();
-    applyPhoneCapabilities(null);
     await refreshPhoneStatus();
     await refreshSMS();
   }

@@ -1,84 +1,143 @@
 <section id="phone-tab" class="phone-panel" style="display: none;">
+
+  <!-- Panel header -->
   <div class="phone-panel-header">
     <div>
       <p class="phone-eyebrow">Voice Calling</p>
       <h2>Phone</h2>
+      <p class="phone-capability-copy" id="phone-capability-copy">Checking modem voice capability...</p>
     </div>
     <div class="phone-header-status" id="phone-status-pill">Unavailable</div>
   </div>
 
-  <div class="phone-grid">
-    <article class="phone-card phone-card-primary">
-      <div class="phone-card-header">
-        <div>
-          <p class="phone-card-label">Dialer</p>
-          <h3>Place a call</h3>
-        </div>
-      </div>
+  <!-- Tab bar -->
+  <nav class="phone-tab-bar" aria-label="Phone sections">
+    <button class="phone-tab-btn is-active" type="button" data-tab="dialer">Dialer</button>
+    <button class="phone-tab-btn" type="button" data-tab="live">Live</button>
+    <button class="phone-tab-btn" type="button" data-tab="recents">
+      Recents
+      <span class="phone-tab-badge" id="phone-recent-count">0</span>
+    </button>
+    <button class="phone-tab-btn" type="button" data-tab="favourites">Favourites</button>
+  </nav>
 
-      <label class="phone-field">
-        <span>Number</span>
-        <input id="phone-number-input" type="text" placeholder="+255..." autocomplete="off" />
-      </label>
+  <!-- Tab body -->
+  <div class="phone-tab-body">
 
-      <div class="phone-dialpad" id="phone-dialpad">
-        <button type="button" data-value="1">1</button>
-        <button type="button" data-value="2">2</button>
-        <button type="button" data-value="3">3</button>
-        <button type="button" data-value="4">4</button>
-        <button type="button" data-value="5">5</button>
-        <button type="button" data-value="6">6</button>
-        <button type="button" data-value="7">7</button>
-        <button type="button" data-value="8">8</button>
-        <button type="button" data-value="9">9</button>
-        <button type="button" data-value="*">*</button>
-        <button type="button" data-value="0">0</button>
-        <button type="button" data-value="#">#</button>
-      </div>
+    <!-- ── Dialer ────────────────────────────────────────────── -->
+    <div class="phone-tab-pane is-active" data-pane="dialer">
+      <article class="phone-pane-card phone-pane-card--dialer">
+        <div class="phone-pane-scroll">
+          <div class="phone-target-card">
+            <div>
+              <p class="phone-target-eyebrow" id="phone-target-eyebrow">Selected contact</p>
+              <h3 class="phone-target-name" id="phone-target-name">Unknown contact</h3>
+              <p class="phone-target-number" id="phone-target-number">Type a number or pick a saved contact.</p>
+            </div>
+            <button id="phone-favorite-toggle" class="phone-btn phone-btn-ghost" type="button" disabled>Add to favourites</button>
+          </div>
 
-      <div class="phone-actions">
-        <button id="phone-call-btn" class="phone-btn phone-btn-primary" type="button">Call</button>
-        <button id="phone-answer-btn" class="phone-btn phone-btn-primary" type="button">Answer</button>
-        <button id="phone-tone-btn" class="phone-btn phone-btn-secondary" type="button">Tone</button>
-        <button id="phone-hangup-btn" class="phone-btn phone-btn-danger" type="button">Hang Up</button>
-        <button id="phone-backspace-btn" class="phone-btn phone-btn-secondary" type="button">Delete</button>
-      </div>
+          <label class="phone-field">
+            <span>Number</span>
+            <input id="phone-number-input" type="text" placeholder="+255..." autocomplete="off" />
+          </label>
 
-      <p class="phone-feedback" id="phone-feedback">Waiting for voice capability check</p>
-    </article>
+          <div class="phone-dialpad" id="phone-dialpad">
+            <button type="button" data-value="1">1</button>
+            <button type="button" data-value="2">2</button>
+            <button type="button" data-value="3">3</button>
+            <button type="button" data-value="4">4</button>
+            <button type="button" data-value="5">5</button>
+            <button type="button" data-value="6">6</button>
+            <button type="button" data-value="7">7</button>
+            <button type="button" data-value="8">8</button>
+            <button type="button" data-value="9">9</button>
+            <button type="button" data-value="*">*</button>
+            <button type="button" data-value="0">0</button>
+            <button type="button" data-value="#">#</button>
+          </div>
 
-    <article class="phone-card">
-      <div class="phone-card-header">
-        <div>
-          <p class="phone-card-label">Status</p>
-          <h3>Current call</h3>
-        </div>
-      </div>
+          <div class="phone-actions">
+            <button id="phone-call-btn" class="phone-btn phone-btn-primary" type="button">Call</button>
+            <button id="phone-answer-btn" class="phone-btn phone-btn-primary" type="button">Answer</button>
+            <button id="phone-tone-btn" class="phone-btn phone-btn-secondary" type="button">Tone</button>
+            <button id="phone-hangup-btn" class="phone-btn phone-btn-danger" type="button">Hang Up</button>
+            <button id="phone-backspace-btn" class="phone-btn phone-btn-secondary" type="button">Delete</button>
+          </div>
 
-      <div class="phone-call-display" id="phone-call-display">No active call.</div>
+          <p class="phone-feedback" id="phone-feedback">Waiting for voice capability check</p>
+        </div>
+      </article>
+    </div>
 
-      <div class="phone-stat-list">
-        <div class="phone-stat">
-          <span>Direction</span>
-          <strong id="phone-direction">--</strong>
+    <!-- ── Live ──────────────────────────────────────────────── -->
+    <div class="phone-tab-pane" data-pane="live">
+      <article class="phone-pane-card">
+        <div class="phone-pane-scroll">
+          <div class="phone-card-header">
+            <div>
+              <p class="phone-card-label">Current call</p>
+              <h3>Live status</h3>
+            </div>
+          </div>
+
+          <div class="phone-call-display" id="phone-call-display">No active call.</div>
+
+          <div class="phone-stat-grid">
+            <div class="phone-stat">
+              <span>Direction</span>
+              <strong id="phone-direction">--</strong>
+            </div>
+            <div class="phone-stat">
+              <span>State reason</span>
+              <strong id="phone-reason">--</strong>
+            </div>
+            <div class="phone-stat">
+              <span>Audio port</span>
+              <strong id="phone-audio-port">--</strong>
+            </div>
+            <div class="phone-stat">
+              <span>Audio format</span>
+              <strong id="phone-audio-format">--</strong>
+            </div>
+            <div class="phone-stat">
+              <span>Call time</span>
+              <strong id="phone-call-time">--</strong>
+            </div>
+            <div class="phone-stat">
+              <span>Capability</span>
+              <strong id="phone-capability-reason">Checking...</strong>
+            </div>
+          </div>
         </div>
-        <div class="phone-stat">
-          <span>State reason</span>
-          <strong id="phone-reason">--</strong>
+      </article>
+    </div>
+
+    <!-- ── Recents ────────────────────────────────────────────── -->
+    <div class="phone-tab-pane" data-pane="recents">
+      <article class="phone-pane-card">
+        <div class="phone-card-header">
+          <div>
+            <p class="phone-card-label">Recent calls</p>
+            <h3>Call log</h3>
+          </div>
         </div>
-        <div class="phone-stat">
-          <span>Audio port</span>
-          <strong id="phone-audio-port">--</strong>
+        <div class="phone-list phone-list-scroll" id="phone-recent-calls-list"></div>
+      </article>
+    </div>
+
+    <!-- ── Favourites ─────────────────────────────────────────── -->
+    <div class="phone-tab-pane" data-pane="favourites">
+      <article class="phone-pane-card">
+        <div class="phone-card-header">
+          <div>
+            <p class="phone-card-label">Favourite people</p>
+            <h3>Quick dial</h3>
+          </div>
         </div>
-        <div class="phone-stat">
-          <span>Audio format</span>
-          <strong id="phone-audio-format">--</strong>
-        </div>
-        <div class="phone-stat">
-          <span>Capability</span>
-          <strong id="phone-capability-reason">Checking...</strong>
-        </div>
-      </div>
-    </article>
+        <div class="phone-list phone-list-scroll" id="phone-favorites-list"></div>
+      </article>
+    </div>
+
   </div>
 </section>

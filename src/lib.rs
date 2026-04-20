@@ -1331,11 +1331,26 @@ async fn get_phone_capabilities_from_context(context: &ModemContext) -> PhoneCap
         };
     }
 
-    let emergency_only = if let Ok(proxy) = modem_voice_proxy(context).await {
-        proxy.get_property("EmergencyOnly").await.unwrap_or(false)
-    } else {
-        false
+    let proxy = match modem_voice_proxy(context).await {
+        Ok(proxy) => proxy,
+        Err(error) => {
+            return PhoneCapabilities {
+                supported: false,
+                emergency_only: false,
+                reason: format!("Voice interface unavailable: {error}"),
+            };
+        }
     };
+
+    if let Err(error) = proxy.get_property::<Vec<OwnedObjectPath>>("Calls").await {
+        return PhoneCapabilities {
+            supported: false,
+            emergency_only: false,
+            reason: format!("Voice interface present but call control is unavailable: {error}"),
+        };
+    }
+
+    let emergency_only = proxy.get_property("EmergencyOnly").await.unwrap_or(false);
 
     PhoneCapabilities {
         supported: true,

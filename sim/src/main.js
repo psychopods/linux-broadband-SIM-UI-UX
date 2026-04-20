@@ -52,6 +52,11 @@ async function initializeApp() {
   initPhone();
   initContacts();
 
+  // Default landing tab on startup/reload.
+  window.dispatchEvent(
+    new CustomEvent("sidebar-item-click", { detail: { label: "USSD dialpad" } })
+  );
+
   // Render immediately with an honest loading state, then hydrate from backend.
   setTopbarLoading();
 
