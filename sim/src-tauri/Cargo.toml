@@ -1,6 +1,6 @@
 [package]
 name = "sim"
-version = "1.1.103"
+version = "1.1.104"
 description = "SIM Broadband Manager for modem status, network control, SMS, USSD, phone calls, and SIM contacts"
 authors = ["Paschal Timoth"]
 edition = "2021"
