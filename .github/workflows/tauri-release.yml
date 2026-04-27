@@ -124,7 +124,7 @@ jobs:
           mkdir -p ~/.snapcraft
           echo "$SNAPCRAFT_STORE_CREDENTIALS" | base64 --decode > ~/.snapcraft/snapcraft.cfg
           snapcraft whoami
-          snapcraft push *.snap --release=stable || echo "Push failed, continuing..."
+          snapcraft upload *.snap --release=stable || echo "Upload failed, continuing..."
 
       - name: Upload snap to release
         uses: softprops/action-gh-release@v2
