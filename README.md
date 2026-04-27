@@ -6,6 +6,8 @@ Built with [Tauri 2](https://tauri.app/) (Rust + WebKit2GTK) and powered by [Mod
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and pull request guidelines.
 
+See [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) for an app architecture walkthrough, frontend/backend file map, and guidance on where to make common changes.
+
 See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community participation and behavior expectations.
 
 See [SECURITY.md](SECURITY.md) for vulnerability reporting and supported version policy.

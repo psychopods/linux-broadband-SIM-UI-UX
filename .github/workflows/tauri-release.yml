@@ -47,6 +47,15 @@ jobs:
           TAURI_UPDATER_PUBLIC_KEY: ${{ secrets.TAURI_UPDATER_PUBLIC_KEY }}
         run: cargo tauri build --bundles appimage,deb
 
+      - name: Normalize release asset filenames
+        working-directory: sim/src-tauri
+        run: |
+          find target/release/bundle -type f \( -name '* *.AppImage' -o -name '* *.deb' \) -print0 |
+            while IFS= read -r -d '' path; do
+              normalized="${path// /.}"
+              mv "$path" "$normalized"
+            done
+
       - name: Sign AppImage for updater
         working-directory: sim/src-tauri
         env:
