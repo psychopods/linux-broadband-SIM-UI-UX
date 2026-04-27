@@ -54,12 +54,12 @@ sudo snap install sim-broadband-manager
 
 ## Requirements
 
-| Requirement | Details |
-| --- | --- |
-| OS | Linux (Ubuntu 22.04+ / Debian 12+ / Linux Mint 21+) |
-| ModemManager | ≥ 1.18 |
-| D-Bus | System bus access to `org.freedesktop.ModemManager1` |
-| Modem | USB or PCIe modem recognised by ModemManager |
+| Requirement  | Details                                              |
+| ------------ | ---------------------------------------------------- |
+| OS           | Linux (Ubuntu 22.04+ / Debian 12+ / Linux Mint 21+)  |
+| ModemManager | ≥ 1.18                                               |
+| D-Bus        | System bus access to `org.freedesktop.ModemManager1` |
+| Modem        | USB or PCIe modem recognised by ModemManager         |
 
 ### Permissions (AppImage)
 
@@ -104,13 +104,13 @@ The AppImage and `.deb` will be output to `sim/src-tauri/target/release/bundle/`
 
 ## Tech Stack
 
-| Layer | Technology |
-| --- | --- |
-| UI | HTML / CSS / JavaScript (vanilla) |
-| Desktop shell | Tauri 2 (Rust) |
-| Modem backend | ModemManager via zbus (D-Bus) |
-| Packaging | AppImage, .deb, Snap |
-| CI/CD | GitHub Actions |
+| Layer         | Technology                        |
+| ------------- | --------------------------------- |
+| UI            | HTML / CSS / JavaScript (vanilla) |
+| Desktop shell | Tauri 2 (Rust)                    |
+| Modem backend | ModemManager via zbus (D-Bus)     |
+| Packaging     | AppImage, .deb, Snap              |
+| CI/CD         | GitHub Actions                    |
 
 ---
 

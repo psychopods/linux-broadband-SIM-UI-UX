@@ -44,10 +44,10 @@ parts:
       mkdir -p $SNAPCRAFT_PART_INSTALL/usr/local/bin
       mkdir -p $SNAPCRAFT_PART_INSTALL/usr/share/applications
       mkdir -p $SNAPCRAFT_PART_INSTALL/usr/share/icons/hicolor/512x512/apps
-      
+
       # Copy the binary
       cp target/release/sim $SNAPCRAFT_PART_INSTALL/usr/local/bin/
-      
+
       # Create desktop entry
       cat > $SNAPCRAFT_PART_INSTALL/usr/share/applications/sim-broadband-manager.desktop <<EOF
       [Desktop Entry]
@@ -59,7 +59,7 @@ parts:
       Categories=Utility;Network;
       Terminal=false
       EOF
-      
+
       # Copy icon (using 128x128 as fallback for 512x512)
       cp ../../../sim/src-tauri/icons/128x128.png \
          $SNAPCRAFT_PART_INSTALL/usr/share/icons/hicolor/512x512/apps/sim-broadband-manager.png || true

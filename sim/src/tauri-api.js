@@ -262,7 +262,8 @@ export async function checkRuntimePermissions() {
       groups: [],
       dbus_modemmanager_access: false,
       ready_for_appimage_modem_access: false,
-      recommendation: "Unable to verify modem permissions. Ensure dialout membership and D-Bus access.",
+      recommendation:
+        "Unable to verify modem permissions. Ensure dialout membership and D-Bus access.",
     };
   }
 }
@@ -272,12 +273,15 @@ export async function checkRuntimePermissions() {
  * This is the main entry point for hydrating the UI with backend data
  */
 export async function updateAllModemData() {
-  const { setInternetStatus, setNetworkProvider, setNetworkSignal, setSimInfo, setTopbarUnavailable } = await import(
-    "./components/topbar/topbar.js"
-  );
-  const { renderNetworkControls, setNetworkPanelUnavailable } = await import(
-    "./components/network/network.js"
-  );
+  const {
+    setInternetStatus,
+    setNetworkProvider,
+    setNetworkSignal,
+    setSimInfo,
+    setTopbarUnavailable,
+  } = await import("./components/topbar/topbar.js");
+  const { renderNetworkControls, setNetworkPanelUnavailable } =
+    await import("./components/network/network.js");
   const { refreshSMS } = await import("./components/sms/sms.js");
   const { refreshPhoneStatus } = await import("./components/phone/phone.js");
 

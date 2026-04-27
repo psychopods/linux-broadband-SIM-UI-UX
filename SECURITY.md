@@ -4,11 +4,11 @@
 
 Security fixes are applied to the latest released version on `main`.
 
-| Version | Supported |
-| --- | --- |
-| Latest release | Yes |
-| Older releases | No |
-| Unreleased local forks | No |
+| Version                | Supported |
+| ---------------------- | --------- |
+| Latest release         | Yes       |
+| Older releases         | No        |
+| Unreleased local forks | No        |
 
 ## Reporting a Vulnerability
 

@@ -1,7 +1,4 @@
-import {
-  initTopbar,
-  setTopbarLoading,
-} from "./components/topbar/topbar.js";
+import { initTopbar, setTopbarLoading } from "./components/topbar/topbar.js";
 import { initSidebar } from "./components/sidebar/sidebar.js";
 import { initNetworkPanel } from "./components/network/network.js";
 import { initSMS } from "./components/sms/sms.js";
@@ -54,7 +51,9 @@ async function initializeApp() {
 
   // Default landing tab on startup/reload.
   window.dispatchEvent(
-    new CustomEvent("sidebar-item-click", { detail: { label: "USSD dialpad" } })
+    new CustomEvent("sidebar-item-click", {
+      detail: { label: "USSD dialpad" },
+    }),
   );
 
   // Render immediately with an honest loading state, then hydrate from backend.
@@ -65,7 +64,7 @@ async function initializeApp() {
   if (!runtimePermissions.ready_for_appimage_modem_access) {
     console.warn(
       "Permission check: modem access may fail. Ensure your user is in 'dialout' (or 'plugdev' on some systems) and re-login.",
-      runtimePermissions
+      runtimePermissions,
     );
   }
 

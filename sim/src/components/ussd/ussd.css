@@ -6,9 +6,21 @@
   gap: clamp(10px, 1.6vh, 18px);
   padding: clamp(12px, 1.8vh, 20px) clamp(14px, 2vw, 22px);
   background:
-    radial-gradient(circle at top left, rgba(51, 153, 102, 0.14), transparent 28%),
-    radial-gradient(circle at bottom right, rgba(129, 176, 255, 0.18), transparent 34%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(241, 249, 250, 0.96));
+    radial-gradient(
+      circle at top left,
+      rgba(51, 153, 102, 0.14),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(129, 176, 255, 0.18),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.94),
+      rgba(241, 249, 250, 0.96)
+    );
   overflow: hidden;
 }
 
@@ -72,7 +84,11 @@
 
 .ussd-card-primary {
   background:
-    radial-gradient(circle at top left, rgba(51, 153, 102, 0.12), transparent 45%),
+    radial-gradient(
+      circle at top left,
+      rgba(51, 153, 102, 0.12),
+      transparent 45%
+    ),
     rgba(255, 255, 255, 0.94);
 }
 

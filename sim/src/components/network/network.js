@@ -84,8 +84,12 @@ function renderSimManagement(simManagement) {
   }
 
   setSimFeedback(
-    !present ? "No SIM detected" : unlockRequired ? "SIM unlock required" : "SIM ready",
-    false
+    !present
+      ? "No SIM detected"
+      : unlockRequired
+        ? "SIM unlock required"
+        : "SIM ready",
+    false,
   );
 }
 
@@ -105,9 +109,20 @@ export function renderNetworkControls(networkControls) {
     pill.classList.toggle("is-disconnected", !connected);
   }
 
-  setText("#network-registration-state", networkControls.registration_state, "Unknown");
-  setText("#network-roaming-state", networkControls.roaming ? "Yes" : "No", "Unknown");
-  setText("#network-bearer-state", bearer?.connected ? "Active" : bearer ? "Inactive" : "None");
+  setText(
+    "#network-registration-state",
+    networkControls.registration_state,
+    "Unknown",
+  );
+  setText(
+    "#network-roaming-state",
+    networkControls.roaming ? "Yes" : "No",
+    "Unknown",
+  );
+  setText(
+    "#network-bearer-state",
+    bearer?.connected ? "Active" : bearer ? "Inactive" : "None",
+  );
   setText("#network-bearer-interface", bearer?.interface, "--");
   setText("#network-bearer-apn", bearer?.apn, "--");
   setText("#network-bearer-path", bearer?.path, "--");

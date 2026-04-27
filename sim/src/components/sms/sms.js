@@ -36,7 +36,10 @@ function loadReadState() {
 
 function saveReadState() {
   try {
-    window.localStorage.setItem(SMS_READ_STATE_KEY, JSON.stringify(smsState.readState));
+    window.localStorage.setItem(
+      SMS_READ_STATE_KEY,
+      JSON.stringify(smsState.readState),
+    );
   } catch {
     // Ignore storage failures and keep the in-memory session state.
   }
@@ -93,7 +96,9 @@ function phoneMatches(left, right) {
 }
 
 function findThreadByPeer(peer) {
-  return smsState.threads.find((thread) => phoneMatches(thread.peer, peer)) || null;
+  return (
+    smsState.threads.find((thread) => phoneMatches(thread.peer, peer)) || null
+  );
 }
 
 function getThreadsKey(threads) {
@@ -105,7 +110,7 @@ function getThreadsKey(threads) {
       last_message_id: thread.last_message?.id || "",
       last_message_text: thread.last_message?.text || "",
       last_message_timestamp: thread.last_message?.timestamp || "",
-    }))
+    })),
   );
 }
 
@@ -117,12 +122,14 @@ function getConversationKey(messages) {
       timestamp: message.timestamp || "",
       state: message.state || "",
       incoming: Boolean(message.incoming),
-    }))
+    })),
   );
 }
 
 function getLatestIncomingMessage(messages) {
-  return [...(messages || [])].reverse().find((message) => message.incoming) || null;
+  return (
+    [...(messages || [])].reverse().find((message) => message.incoming) || null
+  );
 }
 
 function getReadMarker(threadId) {
@@ -153,8 +160,9 @@ function updateSidebarUnreadBadge() {
   import("../sidebar/sidebar.js")
     .then(({ setSidebarBadge }) => {
       const unreadCount = smsState.threads.reduce(
-        (total, thread) => total + (smsState.readState[thread.id]?.unreadCount || 0),
-        0
+        (total, thread) =>
+          total + (smsState.readState[thread.id]?.unreadCount || 0),
+        0,
       );
 
       setSidebarBadge("SMS", unreadCount);
@@ -170,7 +178,12 @@ function isNearBottom() {
   }
 
   const threshold = 48;
-  return messagesArea.scrollHeight - messagesArea.scrollTop - messagesArea.clientHeight <= threshold;
+  return (
+    messagesArea.scrollHeight -
+      messagesArea.scrollTop -
+      messagesArea.clientHeight <=
+    threshold
+  );
 }
 
 function restoreScroll(previousOffsetFromBottom) {
@@ -178,7 +191,12 @@ function restoreScroll(previousOffsetFromBottom) {
     return;
   }
 
-  messagesArea.scrollTop = Math.max(0, messagesArea.scrollHeight - messagesArea.clientHeight - previousOffsetFromBottom);
+  messagesArea.scrollTop = Math.max(
+    0,
+    messagesArea.scrollHeight -
+      messagesArea.clientHeight -
+      previousOffsetFromBottom,
+  );
 }
 
 function setNewMessagesIndicator(count) {
@@ -190,7 +208,8 @@ function setNewMessagesIndicator(count) {
 
   if (count > 0) {
     newMessagesIndicator.hidden = false;
-    newMessagesIndicator.textContent = count === 1 ? "1 new message" : `${count} new messages`;
+    newMessagesIndicator.textContent =
+      count === 1 ? "1 new message" : `${count} new messages`;
   } else {
     newMessagesIndicator.hidden = true;
     newMessagesIndicator.textContent = "";
@@ -207,7 +226,10 @@ function markThreadAsRead(threadId, messages) {
 
   smsState.readState[threadId] = {
     id: latestIncoming?.id || smsState.readState[threadId]?.id || "",
-    timestamp: latestIncoming?.timestamp || smsState.readState[threadId]?.timestamp || "",
+    timestamp:
+      latestIncoming?.timestamp ||
+      smsState.readState[threadId]?.timestamp ||
+      "",
     unreadCount: 0,
     knownMessageCount: messages.length,
   };
@@ -243,10 +265,7 @@ function syncUnreadStateForThreads() {
 
     const delta = Math.max(0, thread.message_count - knownMessageCount);
     if (delta > 0) {
-      if (
-        thread.id === smsState.selectedThreadId &&
-        activeVisibleAndAtBottom
-      ) {
+      if (thread.id === smsState.selectedThreadId && activeVisibleAndAtBottom) {
         unreadCount = 0;
       } else if (thread.last_message?.incoming) {
         unreadCount += delta;
@@ -288,14 +307,16 @@ function renderContacts() {
   }
 
   if (smsState.loadingThreads && smsState.threads.length === 0) {
-    contactsList.innerHTML = '<div class="sms-placeholder">Loading messages...</div>';
+    contactsList.innerHTML =
+      '<div class="sms-placeholder">Loading messages...</div>';
     smsState.renderedThreadsKey = "__loading__";
     updateSidebarUnreadBadge();
     return;
   }
 
   if (smsState.threads.length === 0) {
-    contactsList.innerHTML = '<div class="sms-placeholder">No modem messages found</div>';
+    contactsList.innerHTML =
+      '<div class="sms-placeholder">No modem messages found</div>';
     smsState.renderedThreadsKey = "__empty__";
     updateSidebarUnreadBadge();
     return;
@@ -309,8 +330,10 @@ function renderContacts() {
   contactsList.innerHTML = smsState.threads
     .map((thread) => {
       const preview = thread.last_message?.text?.trim() || "No messages yet";
-      const activeClass = thread.id === smsState.selectedThreadId ? " active" : "";
-      const countLabel = thread.message_count > 0 ? ` · ${thread.message_count}` : "";
+      const activeClass =
+        thread.id === smsState.selectedThreadId ? " active" : "";
+      const countLabel =
+        thread.message_count > 0 ? ` · ${thread.message_count}` : "";
 
       return `
         <div class="sms-contact-item${activeClass}" data-thread-id="${escapeHtml(thread.id)}" data-peer="${escapeHtml(thread.peer)}">
@@ -344,7 +367,12 @@ function renderMessages(messages, placeholder, options = {}) {
   const preserveScroll = Boolean(options.preserveScroll);
   const shouldAutoScroll = options.autoScroll ?? true;
   const previousOffsetFromBottom = preserveScroll
-    ? Math.max(0, messagesArea.scrollHeight - messagesArea.scrollTop - messagesArea.clientHeight)
+    ? Math.max(
+        0,
+        messagesArea.scrollHeight -
+          messagesArea.scrollTop -
+          messagesArea.clientHeight,
+      )
     : 0;
   const conversationKey = getConversationKey(messages);
 
@@ -422,7 +450,8 @@ async function loadConversation(threadId, options = {}) {
     const incomingChanged =
       previousKey &&
       previousKey !== nextKey &&
-      getLatestIncomingMessage(messages)?.id !== getLatestIncomingMessage(smsState.lastConversationMessages)?.id;
+      getLatestIncomingMessage(messages)?.id !==
+        getLatestIncomingMessage(smsState.lastConversationMessages)?.id;
 
     smsState.lastConversationMessages = messages;
 
@@ -514,17 +543,24 @@ export async function refreshSMS() {
     }
 
     const selectedThread =
-      smsState.threads.find((thread) => thread.id === smsState.selectedThreadId) || smsState.threads[0];
+      smsState.threads.find(
+        (thread) => thread.id === smsState.selectedThreadId,
+      ) || smsState.threads[0];
 
     renderContacts();
 
     if (selectedThread && !smsState.loadingConversation && !smsState.sending) {
       const selectedChanged =
-        selectedThread.id !== smsState.selectedThreadId || selectedThread.peer !== smsState.selectedPeer;
+        selectedThread.id !== smsState.selectedThreadId ||
+        selectedThread.peer !== smsState.selectedPeer;
       if (selectedChanged) {
         await selectThread(selectedThread.id, selectedThread.peer);
       } else {
-        setActiveThread(selectedThread.id, selectedThread.peer, selectedThread.peer);
+        setActiveThread(
+          selectedThread.id,
+          selectedThread.peer,
+          selectedThread.peer,
+        );
         await loadConversation(selectedThread.id, {
           showLoading: false,
           preserveScroll: !isNearBottom(),
@@ -533,7 +569,11 @@ export async function refreshSMS() {
         });
       }
     } else if (selectedThread) {
-      setActiveThread(selectedThread.id, selectedThread.peer, selectedThread.peer);
+      setActiveThread(
+        selectedThread.id,
+        selectedThread.peer,
+        selectedThread.peer,
+      );
     }
   } catch (error) {
     console.error("Failed to refresh SMS threads:", error);
@@ -617,7 +657,10 @@ export function initSMS() {
     }
 
     messagesArea.scrollTop = messagesArea.scrollHeight;
-    markThreadAsRead(smsState.selectedThreadId, smsState.lastConversationMessages);
+    markThreadAsRead(
+      smsState.selectedThreadId,
+      smsState.lastConversationMessages,
+    );
   });
   messagesArea?.parentElement?.appendChild(newMessagesIndicator);
 
@@ -680,7 +723,10 @@ export function initSMS() {
 
   messagesArea?.addEventListener("scroll", () => {
     if (isNearBottom() && smsState.selectedThreadId) {
-      markThreadAsRead(smsState.selectedThreadId, smsState.lastConversationMessages);
+      markThreadAsRead(
+        smsState.selectedThreadId,
+        smsState.lastConversationMessages,
+      );
     }
   });
 

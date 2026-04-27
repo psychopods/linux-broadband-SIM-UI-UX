@@ -49,22 +49,33 @@ function safeParseJson(value, fallback) {
 }
 
 function loadStoredRecentCalls() {
-  const entries = safeParseJson(window.localStorage?.getItem(RECENT_CALLS_STORAGE_KEY), []);
+  const entries = safeParseJson(
+    window.localStorage?.getItem(RECENT_CALLS_STORAGE_KEY),
+    [],
+  );
   if (!Array.isArray(entries)) {
     return [];
   }
 
-  return entries.filter((entry) => !String(entry?.id || "").startsWith("mock-call-"));
+  return entries.filter(
+    (entry) => !String(entry?.id || "").startsWith("mock-call-"),
+  );
 }
 
 function loadStoredFavoriteIds() {
-  const ids = safeParseJson(window.localStorage?.getItem(FAVORITE_CONTACTS_STORAGE_KEY), []);
+  const ids = safeParseJson(
+    window.localStorage?.getItem(FAVORITE_CONTACTS_STORAGE_KEY),
+    [],
+  );
   return Array.isArray(ids) ? ids : [];
 }
 
 function persistRecentCalls() {
   try {
-    window.localStorage?.setItem(RECENT_CALLS_STORAGE_KEY, JSON.stringify(phoneState.recentCalls));
+    window.localStorage?.setItem(
+      RECENT_CALLS_STORAGE_KEY,
+      JSON.stringify(phoneState.recentCalls),
+    );
   } catch {
     // Ignore storage failures.
   }
@@ -72,7 +83,10 @@ function persistRecentCalls() {
 
 function persistFavoriteIds() {
   try {
-    window.localStorage?.setItem(FAVORITE_CONTACTS_STORAGE_KEY, JSON.stringify(phoneState.favoriteIds));
+    window.localStorage?.setItem(
+      FAVORITE_CONTACTS_STORAGE_KEY,
+      JSON.stringify(phoneState.favoriteIds),
+    );
   } catch {
     // Ignore storage failures.
   }
@@ -125,7 +139,8 @@ function numbersLikelyMatch(left, right) {
   return (
     normalizedLeft.length >= 7 &&
     normalizedRight.length >= 7 &&
-    (normalizedLeft.endsWith(normalizedRight) || normalizedRight.endsWith(normalizedLeft))
+    (normalizedLeft.endsWith(normalizedRight) ||
+      normalizedRight.endsWith(normalizedLeft))
   );
 }
 
@@ -153,11 +168,17 @@ function getFallbackStatus(reason = "Phone status unavailable") {
 }
 
 function resolveContactByNumber(number) {
-  return phoneState.contacts.find((contact) => numbersLikelyMatch(contact?.number, number)) || null;
+  return (
+    phoneState.contacts.find((contact) =>
+      numbersLikelyMatch(contact?.number, number),
+    ) || null
+  );
 }
 
 function resolveContactById(contactId) {
-  return phoneState.contacts.find((contact) => contact?.id === contactId) || null;
+  return (
+    phoneState.contacts.find((contact) => contact?.id === contactId) || null
+  );
 }
 
 function getResolvedIdentity(number, fallbackName = "Unknown contact") {
@@ -206,7 +227,10 @@ function getCallBadge(entry) {
   }
 
   if (state === "Active") {
-    return { label: direction === "Incoming" ? "Incoming" : "Outgoing", className: "is-active" };
+    return {
+      label: direction === "Incoming" ? "Incoming" : "Outgoing",
+      className: "is-active",
+    };
   }
 
   return { label: direction || "Call", className: "" };
@@ -219,14 +243,17 @@ function setBusy(isBusy) {
     numberInput.disabled = isBusy;
   }
 
-  document.querySelectorAll("#phone-dialpad button, .phone-btn").forEach((button) => {
-    if (button === favoriteToggle) {
-      button.disabled = isBusy || !resolveContactByNumber(numberInput?.value ?? "");
-      return;
-    }
+  document
+    .querySelectorAll("#phone-dialpad button, .phone-btn")
+    .forEach((button) => {
+      if (button === favoriteToggle) {
+        button.disabled =
+          isBusy || !resolveContactByNumber(numberInput?.value ?? "");
+        return;
+      }
 
-    button.disabled = isBusy;
-  });
+      button.disabled = isBusy;
+    });
 }
 
 function renderStatusPill(text, mode = "") {
@@ -248,7 +275,8 @@ function renderTargetIdentity() {
   if (!currentValue) {
     if (targetEyebrow) targetEyebrow.textContent = "Selected contact";
     if (targetName) targetName.textContent = "Unknown contact";
-    if (targetNumber) targetNumber.textContent = "Type a number or pick a saved contact.";
+    if (targetNumber)
+      targetNumber.textContent = "Type a number or pick a saved contact.";
     if (favoriteToggle) {
       favoriteToggle.disabled = true;
       favoriteToggle.textContent = "Add to favourites";
@@ -257,7 +285,9 @@ function renderTargetIdentity() {
   }
 
   if (targetEyebrow) {
-    targetEyebrow.textContent = contact ? "Matched SIM contact" : "Manual number";
+    targetEyebrow.textContent = contact
+      ? "Matched SIM contact"
+      : "Manual number";
   }
   if (targetName) {
     targetName.textContent = name;
@@ -267,14 +297,21 @@ function renderTargetIdentity() {
   }
 
   if (favoriteToggle) {
-    const isFavorite = Boolean(contact && phoneState.favoriteIds.includes(contact.id));
+    const isFavorite = Boolean(
+      contact && phoneState.favoriteIds.includes(contact.id),
+    );
     favoriteToggle.disabled = !contact || phoneState.loading;
-    favoriteToggle.textContent = isFavorite ? "Remove favourite" : "Add to favourites";
+    favoriteToggle.textContent = isFavorite
+      ? "Remove favourite"
+      : "Add to favourites";
   }
 }
 
 function addRecentCall(entry) {
-  phoneState.recentCalls = [entry, ...phoneState.recentCalls].slice(0, MAX_RECENT_CALLS);
+  phoneState.recentCalls = [entry, ...phoneState.recentCalls].slice(
+    0,
+    MAX_RECENT_CALLS,
+  );
   persistRecentCalls();
   renderRecentCalls();
 }
@@ -285,7 +322,10 @@ function finalizeActiveCallSession() {
     return;
   }
 
-  const identity = getResolvedIdentity(session.number, session.name || "Unknown contact");
+  const identity = getResolvedIdentity(
+    session.number,
+    session.name || "Unknown contact",
+  );
   addRecentCall({
     id: `${session.startedAt}-${normalizeDigits(session.number) || "unknown"}`,
     contactId: identity.contact?.id || null,
@@ -296,7 +336,12 @@ function finalizeActiveCallSession() {
     stateReason: session.stateReason,
     startedAt: session.startedAt,
     endedAt: session.lastSeenAt,
-    durationSeconds: session.answeredAt ? Math.max(0, Math.round((session.lastSeenAt - session.answeredAt) / 1000)) : 0,
+    durationSeconds: session.answeredAt
+      ? Math.max(
+          0,
+          Math.round((session.lastSeenAt - session.answeredAt) / 1000),
+        )
+      : 0,
   });
   phoneState.activeCallSession = null;
 }
@@ -314,7 +359,10 @@ function syncCallSession(status) {
   const resolved = getResolvedIdentity(number);
   const key = `${normalizeDigits(number) || "unknown"}|${call.direction || "Unknown"}`;
 
-  if (!phoneState.activeCallSession || phoneState.activeCallSession.key !== key) {
+  if (
+    !phoneState.activeCallSession ||
+    phoneState.activeCallSession.key !== key
+  ) {
     finalizeActiveCallSession();
     phoneState.activeCallSession = {
       key,
@@ -330,8 +378,10 @@ function syncCallSession(status) {
     return;
   }
 
-  phoneState.activeCallSession.state = call.state || phoneState.activeCallSession.state;
-  phoneState.activeCallSession.stateReason = call.state_reason || phoneState.activeCallSession.stateReason;
+  phoneState.activeCallSession.state =
+    call.state || phoneState.activeCallSession.state;
+  phoneState.activeCallSession.stateReason =
+    call.state_reason || phoneState.activeCallSession.stateReason;
   phoneState.activeCallSession.lastSeenAt = now;
   if (call.state === "Active" && !phoneState.activeCallSession.answeredAt) {
     phoneState.activeCallSession.answeredAt = now;
@@ -360,9 +410,16 @@ function renderRecentCalls() {
 
   recentCallsList.innerHTML = entries
     .map((entry, index) => {
-      const contact = entry.contactId ? resolveContactById(entry.contactId) : resolveContactByNumber(entry.number);
-      const name = String(contact?.name || entry.fallbackName || "Unknown contact").trim() || "Unknown contact";
-      const number = String(contact?.number || entry.number || "No number stored").trim() || "No number stored";
+      const contact = entry.contactId
+        ? resolveContactById(entry.contactId)
+        : resolveContactByNumber(entry.number);
+      const name =
+        String(
+          contact?.name || entry.fallbackName || "Unknown contact",
+        ).trim() || "Unknown contact";
+      const number =
+        String(contact?.number || entry.number || "No number stored").trim() ||
+        "No number stored";
       const badge = getCallBadge(entry);
       return `
         <div class="phone-list-item">
@@ -421,13 +478,19 @@ function getSuggestedFavoriteContacts() {
   return [...phoneState.contacts]
     .filter((contact) => String(contact?.number || "").trim())
     .sort((left, right) => {
-      const leftHasMessage = Boolean(left?.last_message?.timestamp || left?.last_message?.text);
-      const rightHasMessage = Boolean(right?.last_message?.timestamp || right?.last_message?.text);
+      const leftHasMessage = Boolean(
+        left?.last_message?.timestamp || left?.last_message?.text,
+      );
+      const rightHasMessage = Boolean(
+        right?.last_message?.timestamp || right?.last_message?.text,
+      );
       if (leftHasMessage !== rightHasMessage) {
         return leftHasMessage ? -1 : 1;
       }
 
-      return String(left?.name || left?.number || "").localeCompare(String(right?.name || right?.number || ""));
+      return String(left?.name || left?.number || "").localeCompare(
+        String(right?.name || right?.number || ""),
+      );
     })
     .slice(0, MAX_FAVORITES);
 }
@@ -437,7 +500,9 @@ function getFavoriteContacts() {
     .map((contactId) => resolveContactById(contactId))
     .filter(Boolean);
 
-  return explicitFavorites.length ? explicitFavorites : getSuggestedFavoriteContacts();
+  return explicitFavorites.length
+    ? explicitFavorites
+    : getSuggestedFavoriteContacts();
 }
 
 function toggleFavoriteContact(contactId) {
@@ -492,19 +557,21 @@ function renderFavoriteContacts() {
     })
     .join("");
 
-  favoritesList.querySelectorAll("[data-favorite-contact]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const contactId = button.getAttribute("data-favorite-contact") || "";
-      const contact = resolveContactById(contactId);
-      if (!contact || !numberInput) {
-        return;
-      }
+  favoritesList
+    .querySelectorAll("[data-favorite-contact]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const contactId = button.getAttribute("data-favorite-contact") || "";
+        const contact = resolveContactById(contactId);
+        if (!contact || !numberInput) {
+          return;
+        }
 
-      numberInput.value = String(contact.number || "");
-      renderTargetIdentity();
-      numberInput.focus();
+        numberInput.value = String(contact.number || "");
+        renderTargetIdentity();
+        numberInput.focus();
+      });
     });
-  });
 
   favoritesList.querySelectorAll("[data-favorite-toggle]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -539,8 +606,13 @@ function renderPhoneStatus(status) {
   const currentDuration = phoneState.activeCallSession
     ? formatDuration(
         phoneState.activeCallSession.answeredAt
-          ? Math.max(0, Math.round((Date.now() - phoneState.activeCallSession.answeredAt) / 1000))
-          : 0
+          ? Math.max(
+              0,
+              Math.round(
+                (Date.now() - phoneState.activeCallSession.answeredAt) / 1000,
+              ),
+            )
+          : 0,
       )
     : "--";
 
@@ -551,15 +623,23 @@ function renderPhoneStatus(status) {
       : supported
         ? "No active call. Choose a named contact, a favourite, or dial manually."
         : "Voice calling is not available on this modem.",
-    "No active call."
+    "No active call.",
   );
   setText("#phone-direction", call?.direction, "--");
   setText("#phone-reason", call?.state_reason, "--");
   setText("#phone-audio-port", call?.audio_port, "--");
   setText("#phone-audio-format", call?.audio_format, "--");
   setText("#phone-call-time", call ? currentDuration : "--", "--");
-  setText("#phone-capability-reason", status?.capabilities?.reason, "Unavailable");
-  setText("#phone-capability-copy", status?.capabilities?.reason, "Voice calling unavailable");
+  setText(
+    "#phone-capability-reason",
+    status?.capabilities?.reason,
+    "Unavailable",
+  );
+  setText(
+    "#phone-capability-copy",
+    status?.capabilities?.reason,
+    "Voice calling unavailable",
+  );
 
   if (!supported) {
     renderStatusPill("Unavailable", "error");
@@ -575,7 +655,11 @@ function renderPhoneStatus(status) {
 
   const pillMode = call.state === "Active" ? "busy" : "ready";
   renderStatusPill(call.state, pillMode);
-  setFeedback(call.audio_port ? "Host audio route exposed" : "No host audio route exposed yet");
+  setFeedback(
+    call.audio_port
+      ? "Host audio route exposed"
+      : "No host audio route exposed yet",
+  );
 }
 
 async function refreshPhoneContacts() {
@@ -608,7 +692,7 @@ export function applyPhoneCapabilities(capabilities) {
 
 export async function refreshPhoneStatus(statusOverride = null) {
   try {
-    const status = statusOverride || await getPhoneStatus();
+    const status = statusOverride || (await getPhoneStatus());
     if (!status) {
       const fallbackStatus = getFallbackStatus("Phone status unavailable");
       applyPhoneCapabilities(fallbackStatus.capabilities);
@@ -795,15 +879,17 @@ export function initPhone() {
   document.querySelector("#phone-hangup-btn")?.addEventListener("click", () => {
     void handleHangupCall();
   });
-  document.querySelector("#phone-backspace-btn")?.addEventListener("click", () => {
-    if (!numberInput) {
-      return;
-    }
+  document
+    .querySelector("#phone-backspace-btn")
+    ?.addEventListener("click", () => {
+      if (!numberInput) {
+        return;
+      }
 
-    numberInput.value = numberInput.value.slice(0, -1);
-    renderTargetIdentity();
-    numberInput.focus();
-  });
+      numberInput.value = numberInput.value.slice(0, -1);
+      renderTargetIdentity();
+      numberInput.focus();
+    });
 
   window.addEventListener("sidebar-item-click", (e) => {
     if (e.detail.label === "Phone") {
@@ -833,8 +919,16 @@ export function initPhone() {
   document.querySelectorAll(".phone-tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const target = btn.dataset.tab;
-      document.querySelectorAll(".phone-tab-btn").forEach((b) => b.classList.toggle("is-active", b.dataset.tab === target));
-      document.querySelectorAll(".phone-tab-pane").forEach((p) => p.classList.toggle("is-active", p.dataset.pane === target));
+      document
+        .querySelectorAll(".phone-tab-btn")
+        .forEach((b) =>
+          b.classList.toggle("is-active", b.dataset.tab === target),
+        );
+      document
+        .querySelectorAll(".phone-tab-pane")
+        .forEach((p) =>
+          p.classList.toggle("is-active", p.dataset.pane === target),
+        );
     });
   });
 }

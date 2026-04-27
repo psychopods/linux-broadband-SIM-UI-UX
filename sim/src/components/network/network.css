@@ -10,9 +10,21 @@
   gap: clamp(10px, 1.4vh, 16px);
   padding: clamp(12px, 1.8vh, 20px) clamp(14px, 2vw, 22px);
   background:
-    radial-gradient(circle at top right, rgba(0, 141, 134, 0.14), transparent 30%),
-    radial-gradient(circle at bottom left, rgba(129, 176, 255, 0.2), transparent 36%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(240, 249, 251, 0.96));
+    radial-gradient(
+      circle at top right,
+      rgba(0, 141, 134, 0.14),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at bottom left,
+      rgba(129, 176, 255, 0.2),
+      transparent 36%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.94),
+      rgba(240, 249, 251, 0.96)
+    );
   overflow: hidden;
 }
 
@@ -127,7 +139,10 @@
   font: inherit;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.16s ease, opacity 0.16s ease, background 0.16s ease;
+  transition:
+    transform 0.16s ease,
+    opacity 0.16s ease,
+    background 0.16s ease;
 }
 
 .network-btn:hover:not(:disabled) {

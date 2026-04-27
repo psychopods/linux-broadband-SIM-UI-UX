@@ -1,45 +1,67 @@
-<section id="phone-tab" class="phone-panel" style="display: none;">
-
+<section id="phone-tab" class="phone-panel" style="display: none">
   <!-- Panel header -->
   <div class="phone-panel-header">
     <div>
       <p class="phone-eyebrow">Voice Calling</p>
       <h2>Phone</h2>
-      <p class="phone-capability-copy" id="phone-capability-copy">Checking modem voice capability...</p>
+      <p class="phone-capability-copy" id="phone-capability-copy">
+        Checking modem voice capability...
+      </p>
     </div>
     <div class="phone-header-status" id="phone-status-pill">Unavailable</div>
   </div>
 
   <!-- Tab bar -->
   <nav class="phone-tab-bar" aria-label="Phone sections">
-    <button class="phone-tab-btn is-active" type="button" data-tab="dialer">Dialer</button>
+    <button class="phone-tab-btn is-active" type="button" data-tab="dialer">
+      Dialer
+    </button>
     <button class="phone-tab-btn" type="button" data-tab="live">Live</button>
     <button class="phone-tab-btn" type="button" data-tab="recents">
       Recents
       <span class="phone-tab-badge" id="phone-recent-count">0</span>
     </button>
-    <button class="phone-tab-btn" type="button" data-tab="favourites">Favourites</button>
+    <button class="phone-tab-btn" type="button" data-tab="favourites">
+      Favourites
+    </button>
   </nav>
 
   <!-- Tab body -->
   <div class="phone-tab-body">
-
     <!-- ── Dialer ────────────────────────────────────────────── -->
     <div class="phone-tab-pane is-active" data-pane="dialer">
       <article class="phone-pane-card phone-pane-card--dialer">
         <div class="phone-pane-scroll">
           <div class="phone-target-card">
             <div>
-              <p class="phone-target-eyebrow" id="phone-target-eyebrow">Selected contact</p>
-              <h3 class="phone-target-name" id="phone-target-name">Unknown contact</h3>
-              <p class="phone-target-number" id="phone-target-number">Type a number or pick a saved contact.</p>
+              <p class="phone-target-eyebrow" id="phone-target-eyebrow">
+                Selected contact
+              </p>
+              <h3 class="phone-target-name" id="phone-target-name">
+                Unknown contact
+              </h3>
+              <p class="phone-target-number" id="phone-target-number">
+                Type a number or pick a saved contact.
+              </p>
             </div>
-            <button id="phone-favorite-toggle" class="phone-btn phone-btn-ghost" type="button" disabled>Add to favourites</button>
+            <button
+              id="phone-favorite-toggle"
+              class="phone-btn phone-btn-ghost"
+              type="button"
+              disabled
+            >
+              Add to favourites
+            </button>
           </div>
 
           <label class="phone-field">
             <span>Number</span>
-            <input id="phone-number-input" type="text" placeholder="+255..." autocomplete="off" />
+            <input
+              id="phone-number-input"
+              type="text"
+              placeholder="+255..."
+              autocomplete="off"
+            />
           </label>
 
           <div class="phone-dialpad" id="phone-dialpad">
@@ -58,14 +80,46 @@
           </div>
 
           <div class="phone-actions">
-            <button id="phone-call-btn" class="phone-btn phone-btn-primary" type="button">Call</button>
-            <button id="phone-answer-btn" class="phone-btn phone-btn-primary" type="button">Answer</button>
-            <button id="phone-tone-btn" class="phone-btn phone-btn-secondary" type="button">Tone</button>
-            <button id="phone-hangup-btn" class="phone-btn phone-btn-danger" type="button">Hang Up</button>
-            <button id="phone-backspace-btn" class="phone-btn phone-btn-secondary" type="button">Delete</button>
+            <button
+              id="phone-call-btn"
+              class="phone-btn phone-btn-primary"
+              type="button"
+            >
+              Call
+            </button>
+            <button
+              id="phone-answer-btn"
+              class="phone-btn phone-btn-primary"
+              type="button"
+            >
+              Answer
+            </button>
+            <button
+              id="phone-tone-btn"
+              class="phone-btn phone-btn-secondary"
+              type="button"
+            >
+              Tone
+            </button>
+            <button
+              id="phone-hangup-btn"
+              class="phone-btn phone-btn-danger"
+              type="button"
+            >
+              Hang Up
+            </button>
+            <button
+              id="phone-backspace-btn"
+              class="phone-btn phone-btn-secondary"
+              type="button"
+            >
+              Delete
+            </button>
           </div>
 
-          <p class="phone-feedback" id="phone-feedback">Waiting for voice capability check</p>
+          <p class="phone-feedback" id="phone-feedback">
+            Waiting for voice capability check
+          </p>
         </div>
       </article>
     </div>
@@ -81,7 +135,9 @@
             </div>
           </div>
 
-          <div class="phone-call-display" id="phone-call-display">No active call.</div>
+          <div class="phone-call-display" id="phone-call-display">
+            No active call.
+          </div>
 
           <div class="phone-stat-grid">
             <div class="phone-stat">
@@ -122,7 +178,10 @@
             <h3>Call log</h3>
           </div>
         </div>
-        <div class="phone-list phone-list-scroll" id="phone-recent-calls-list"></div>
+        <div
+          class="phone-list phone-list-scroll"
+          id="phone-recent-calls-list"
+        ></div>
       </article>
     </div>
 
@@ -135,9 +194,11 @@
             <h3>Quick dial</h3>
           </div>
         </div>
-        <div class="phone-list phone-list-scroll" id="phone-favorites-list"></div>
+        <div
+          class="phone-list phone-list-scroll"
+          id="phone-favorites-list"
+        ></div>
       </article>
     </div>
-
   </div>
 </section>

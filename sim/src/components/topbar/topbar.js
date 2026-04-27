@@ -1,4 +1,9 @@
-import { checkAppUpdate, checkRuntimePermissions, getAppMetadata, installAppUpdate } from "../../tauri-api.js";
+import {
+  checkAppUpdate,
+  checkRuntimePermissions,
+  getAppMetadata,
+  installAppUpdate,
+} from "../../tauri-api.js";
 
 let topbarInitialized = false;
 
@@ -14,7 +19,11 @@ function setInternetLoadingState(linkStateEl, label, className) {
   }
 
   linkStateEl.textContent = label;
-  linkStateEl.classList.remove("pill-connected", "pill-disconnected", "pill-pending");
+  linkStateEl.classList.remove(
+    "pill-connected",
+    "pill-disconnected",
+    "pill-pending",
+  );
   linkStateEl.classList.add(className);
 }
 
@@ -30,7 +39,7 @@ function setInternetStatus({ connected, radioTech }) {
   setInternetLoadingState(
     linkStateEl,
     isConnected ? "Connected" : "Disconnected",
-    isConnected ? "pill-connected" : "pill-disconnected"
+    isConnected ? "pill-connected" : "pill-disconnected",
   );
   radioTechEl.textContent = normalizeRadioTech(radioTech);
 }
@@ -81,8 +90,8 @@ function getSignalLevel(dbm) {
 
 const SIGNAL_ICONS = {
   none: "/assets/icons/signal-none.png",
-  low:  "/assets/icons/signal-low.png",
-  mid:  "/assets/icons/signal-mid.png",
+  low: "/assets/icons/signal-low.png",
+  mid: "/assets/icons/signal-mid.png",
   high: "/assets/icons/signal-high.png",
 };
 
@@ -98,9 +107,11 @@ function setNetworkSignal(dbm) {
   const normalizedDbm = normalizeDbm(dbm);
   const signalLevel = getSignalLevel(normalizedDbm);
 
-  signalDbEl.textContent = normalizedDbm === null ? "-- dBm" : `${normalizedDbm} dBm`;
+  signalDbEl.textContent =
+    normalizedDbm === null ? "-- dBm" : `${normalizedDbm} dBm`;
   signalStrengthEl.textContent = signalLevel.label;
-  signalIconEl.src = SIGNAL_ICONS[signalLevel.label.toLowerCase()] ?? SIGNAL_ICONS.none;
+  signalIconEl.src =
+    SIGNAL_ICONS[signalLevel.label.toLowerCase()] ?? SIGNAL_ICONS.none;
   signalIconEl.alt = `Signal: ${signalLevel.label}`;
 }
 
@@ -122,7 +133,7 @@ function setTopbarLoading() {
   setInternetLoadingState(
     document.querySelector("#internet-link-state"),
     "Loading",
-    "pill-pending"
+    "pill-pending",
   );
 
   if (radioTechEl) {
@@ -144,7 +155,7 @@ function setTopbarUnavailable() {
   setInternetLoadingState(
     document.querySelector("#internet-link-state"),
     "Unavailable",
-    "pill-disconnected"
+    "pill-disconnected",
   );
 
   if (radioTechEl) {
@@ -172,7 +183,9 @@ async function refreshSettingsMeta() {
   }
 
   const metadata = await getAppMetadata();
-  metaEl.textContent = metadata?.version ? `v${metadata.version}` : "About & updates";
+  metaEl.textContent = metadata?.version
+    ? `v${metadata.version}`
+    : "About & updates";
 }
 
 async function handleSettingsClick() {
@@ -185,7 +198,8 @@ async function handleSettingsClick() {
   const description = metadata?.description || "No description available";
   const permissionHint = permissions.ready_for_appimage_modem_access
     ? "Modem permissions look ready for AppImage use."
-    : permissions.recommendation || "Modem permissions may require dialout membership.";
+    : permissions.recommendation ||
+      "Modem permissions may require dialout membership.";
 
   if (update.update_available) {
     const body = update.body ? `\n\nRelease notes:\n${update.body}` : "";
@@ -196,7 +210,7 @@ async function handleSettingsClick() {
     if (
       update.configured &&
       window.confirm(
-        `${title}\nVersion: ${version}\nLatest: ${update.latest_version || "newer version"}\n\n${description}\n\n${permissionHint}${body}\n\n${configuredHint}`
+        `${title}\nVersion: ${version}\nLatest: ${update.latest_version || "newer version"}\n\n${description}\n\n${permissionHint}${body}\n\n${configuredHint}`,
       )
     ) {
       const button = document.querySelector("#settings-button");
@@ -221,13 +235,15 @@ async function handleSettingsClick() {
     }
 
     window.alert(
-      `${title}\nVersion: ${version}\nLatest: ${update.latest_version || "newer version"}\n\n${description}\n\n${permissionHint}${body}\n\n${configuredHint}`
+      `${title}\nVersion: ${version}\nLatest: ${update.latest_version || "newer version"}\n\n${description}\n\n${permissionHint}${body}\n\n${configuredHint}`,
     );
     return;
   }
 
   const note = update.note ? `\n\nUpdate status: ${update.note}` : "";
-  window.alert(`${title}\nVersion: ${version}\n\n${description}\n\n${permissionHint}${note}`);
+  window.alert(
+    `${title}\nVersion: ${version}\n\n${description}\n\n${permissionHint}${note}`,
+  );
 }
 
 function initTopbar() {

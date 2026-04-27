@@ -1,4 +1,4 @@
-<section id="ussd-tab" class="ussd-panel" style="display: none;">
+<section id="ussd-tab" class="ussd-panel" style="display: none">
   <div class="ussd-panel-header">
     <div>
       <p class="ussd-eyebrow">Interactive Service Codes</p>
@@ -18,7 +18,12 @@
 
       <label class="ussd-field">
         <span>Code</span>
-        <input id="ussd-code-input" type="text" placeholder="*100#" autocomplete="off" />
+        <input
+          id="ussd-code-input"
+          type="text"
+          placeholder="*100#"
+          autocomplete="off"
+        />
       </label>
 
       <div class="ussd-dialpad" id="ussd-dialpad">
@@ -37,9 +42,27 @@
       </div>
 
       <div class="ussd-actions">
-        <button id="ussd-call-btn" class="ussd-btn ussd-btn-primary" type="button">Send</button>
-        <button id="ussd-backspace-btn" class="ussd-btn ussd-btn-secondary" type="button">Delete</button>
-        <button id="ussd-cancel-btn" class="ussd-btn ussd-btn-secondary" type="button">Cancel</button>
+        <button
+          id="ussd-call-btn"
+          class="ussd-btn ussd-btn-primary"
+          type="button"
+        >
+          Send
+        </button>
+        <button
+          id="ussd-backspace-btn"
+          class="ussd-btn ussd-btn-secondary"
+          type="button"
+        >
+          Delete
+        </button>
+        <button
+          id="ussd-cancel-btn"
+          class="ussd-btn ussd-btn-secondary"
+          type="button"
+        >
+          Cancel
+        </button>
       </div>
 
       <p class="ussd-feedback" id="ussd-feedback">Ready</p>
@@ -53,15 +76,26 @@
         </div>
       </div>
 
-      <div class="ussd-response" id="ussd-response-output">No active USSD response.</div>
+      <div class="ussd-response" id="ussd-response-output">
+        No active USSD response.
+      </div>
 
       <label class="ussd-field">
         <span>Reply to menu</span>
-        <input id="ussd-response-input" type="text" placeholder="1" autocomplete="off" />
+        <input
+          id="ussd-response-input"
+          type="text"
+          placeholder="1"
+          autocomplete="off"
+        />
       </label>
 
       <div class="ussd-actions">
-        <button id="ussd-respond-btn" class="ussd-btn ussd-btn-primary" type="button">
+        <button
+          id="ussd-respond-btn"
+          class="ussd-btn ussd-btn-primary"
+          type="button"
+        >
           Reply
         </button>
       </div>

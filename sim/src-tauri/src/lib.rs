@@ -1,19 +1,17 @@
-use sim_broadband_gui::{
-    answer_phone_call as answer_modem_phone_call, cancel_ussd, connect_network,
-    disconnect_network, get_all_modem_data, get_connection_status, get_current_bearer_details,
-    get_sim_contacts as fetch_sim_contacts,
-    get_network_controls, get_operator_name, get_phone_status as fetch_phone_status,
-    get_radio_tech, get_registration_state, get_roaming_state, get_signal_strength, get_sim_info,
-    get_sim_management, get_sms_conversation as fetch_sms_conversation,
-    get_sms_threads as fetch_sms_threads, get_ussd_status as fetch_ussd_status,
-    hangup_phone_call as hangup_modem_phone_call, initiate_ussd as send_ussd_request,
-    respond_to_ussd as send_ussd_response, send_phone_dtmf as send_modem_dtmf,
-    send_sms as send_modem_sms, start_phone_call as start_modem_phone_call, unlock_sim_pin,
-    BearerDetails, ModemData, NetworkControls, PhoneStatus, SimContact, SimManagement, SmsMessage,
-    SmsThread,
-    UssdSession,
-};
 use serde::Serialize;
+use sim_broadband_gui::{
+    answer_phone_call as answer_modem_phone_call, cancel_ussd, connect_network, disconnect_network,
+    get_all_modem_data, get_connection_status, get_current_bearer_details, get_network_controls,
+    get_operator_name, get_phone_status as fetch_phone_status, get_radio_tech,
+    get_registration_state, get_roaming_state, get_signal_strength,
+    get_sim_contacts as fetch_sim_contacts, get_sim_info, get_sim_management,
+    get_sms_conversation as fetch_sms_conversation, get_sms_threads as fetch_sms_threads,
+    get_ussd_status as fetch_ussd_status, hangup_phone_call as hangup_modem_phone_call,
+    initiate_ussd as send_ussd_request, respond_to_ussd as send_ussd_response,
+    send_phone_dtmf as send_modem_dtmf, send_sms as send_modem_sms,
+    start_phone_call as start_modem_phone_call, unlock_sim_pin, BearerDetails, ModemData,
+    NetworkControls, PhoneStatus, SimContact, SimManagement, SmsMessage, SmsThread, UssdSession,
+};
 use std::process::Command;
 use tauri_plugin_updater::UpdaterExt;
 use url::Url;
@@ -347,7 +345,8 @@ async fn check_runtime_permissions() -> Result<RuntimePermissionStatus, String> 
         }
     };
 
-    let ready_for_appimage_modem_access = dbus_modemmanager_access && (dialout_member || plugdev_member);
+    let ready_for_appimage_modem_access =
+        dbus_modemmanager_access && (dialout_member || plugdev_member);
 
     let recommendation = if ready_for_appimage_modem_access {
         None

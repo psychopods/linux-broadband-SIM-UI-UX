@@ -50,11 +50,15 @@ function openSmsComposerForContact(contact) {
   }
 
   const name = getContactLabel(contact);
-  const smsSidebarItem = document.querySelector('.sidebar-item[aria-label="SMS"]');
+  const smsSidebarItem = document.querySelector(
+    '.sidebar-item[aria-label="SMS"]',
+  );
   if (smsSidebarItem) {
     smsSidebarItem.click();
   } else {
-    window.dispatchEvent(new CustomEvent("sidebar-item-click", { detail: { label: "SMS" } }));
+    window.dispatchEvent(
+      new CustomEvent("sidebar-item-click", { detail: { label: "SMS" } }),
+    );
   }
 
   window.dispatchEvent(
@@ -63,7 +67,7 @@ function openSmsComposerForContact(contact) {
         number,
         label: name || number,
       },
-    })
+    }),
   );
 }
 
@@ -73,7 +77,7 @@ function getPeerHue(identity) {
   for (let i = 0; i < identity.length; i++) {
     hash = (hash * 31 + identity.charCodeAt(i)) & 0xffffffff;
   }
-  return ((hash >>> 0) % 360);
+  return (hash >>> 0) % 360;
 }
 
 function avatarStyle(identity) {
@@ -96,7 +100,11 @@ function getFilteredThreads(contacts) {
     const name = getContactLabel(contact).toLowerCase();
     const number = getContactNumber(contact).toLowerCase();
     const lastMessage = getContactLastMessage(contact).toLowerCase();
-    return name.includes(normalizedQuery) || number.includes(normalizedQuery) || lastMessage.includes(normalizedQuery);
+    return (
+      name.includes(normalizedQuery) ||
+      number.includes(normalizedQuery) ||
+      lastMessage.includes(normalizedQuery)
+    );
   });
 }
 
@@ -105,7 +113,9 @@ function syncSelection(filteredThreads) {
     return;
   }
 
-  const selectedThread = filteredThreads.find((thread) => thread.id === selectedContactId);
+  const selectedThread = filteredThreads.find(
+    (thread) => thread.id === selectedContactId,
+  );
   if (selectedThread) {
     showDetailCard(selectedThread);
     return;
@@ -127,20 +137,23 @@ function renderGrid(contacts) {
   syncSelection(filteredThreads);
 
   if (!contacts || contacts.length === 0) {
-    contactsGrid.innerHTML = '<div class="contacts-placeholder">No contacts found</div>';
+    contactsGrid.innerHTML =
+      '<div class="contacts-placeholder">No contacts found</div>';
     if (contactsCount) contactsCount.textContent = "";
     return;
   }
 
   if (contactsCount) {
     const totalLabel = `${contacts.length} contact${contacts.length !== 1 ? "s" : ""}`;
-    contactsCount.textContent = filteredThreads.length === contacts.length
-      ? totalLabel
-      : `${filteredThreads.length} of ${contacts.length}`;
+    contactsCount.textContent =
+      filteredThreads.length === contacts.length
+        ? totalLabel
+        : `${filteredThreads.length} of ${contacts.length}`;
   }
 
   if (filteredThreads.length === 0) {
-    contactsGrid.innerHTML = '<div class="contacts-placeholder">No matching contacts</div>';
+    contactsGrid.innerHTML =
+      '<div class="contacts-placeholder">No matching contacts</div>';
     return;
   }
 
@@ -216,7 +229,8 @@ function showDetailCard(contact) {
       <span class="contacts-detail-msg-dir">${dir}: </span>${escapeHtml(lastText)}
     `;
   } else {
-    detailLastMsg.innerHTML = '<span class="contacts-detail-no-msg">No messages yet</span>';
+    detailLastMsg.innerHTML =
+      '<span class="contacts-detail-no-msg">No messages yet</span>';
   }
 
   if (detailMessageUserBtn) {
@@ -295,7 +309,12 @@ export function initContacts() {
 
       if (contentShell) {
         contentShell.style.overflow = "hidden";
-        contentShell.classList.remove("sms-active", "network-active", "ussd-active", "phone-active");
+        contentShell.classList.remove(
+          "sms-active",
+          "network-active",
+          "ussd-active",
+          "phone-active",
+        );
       }
 
       void refreshContacts();

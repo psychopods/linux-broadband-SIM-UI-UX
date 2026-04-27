@@ -7,7 +7,7 @@ export function initSidebar() {
       const label = item.getAttribute("aria-label");
       // Dispatch custom event for component coordination
       window.dispatchEvent(
-        new CustomEvent("sidebar-item-click", { detail: { label } })
+        new CustomEvent("sidebar-item-click", { detail: { label } }),
       );
     });
   });
@@ -15,7 +15,7 @@ export function initSidebar() {
 
 export function getSidebarItemByLabel(label) {
   return Array.from(document.querySelectorAll(".sidebar-item")).find(
-    (btn) => btn.getAttribute("aria-label") === label
+    (btn) => btn.getAttribute("aria-label") === label,
   );
 }
 
@@ -40,7 +40,7 @@ export function setSidebarBadge(label, count) {
           badge.classList.remove("badge-hiding");
           badge.textContent = "";
         },
-        { once: true }
+        { once: true },
       );
     }
   } else {

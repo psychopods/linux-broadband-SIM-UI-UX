@@ -1,4 +1,4 @@
-<section id="sms-tab" class="sms-container" style="display: none;">
+<section id="sms-tab" class="sms-container" style="display: none">
   <div class="sms-contacts-panel">
     <div class="sms-contacts-header">
       <h2>Messages</h2>
@@ -26,8 +26,6 @@
     <div class="sms-chat-header" id="sms-chat-header">
       <h2 id="sms-chat-title">Select a contact</h2>
       <div class="sms-chat-actions">
-        <!-- <button class="sms-action-btn" aria-label="Call">📞</button>
-        <button class="sms-action-btn" aria-label="Info">ℹ️</button> -->
       </div>
     </div>
 
@@ -36,14 +34,19 @@
     </div>
 
     <div class="sms-input-area">
-      <input 
-        type="text" 
-        id="sms-input" 
-        class="sms-message-input" 
+      <input
+        type="text"
+        id="sms-input"
+        class="sms-message-input"
         placeholder="Write a message..."
         disabled
+      />
+      <button
+        class="sms-send-btn"
+        id="sms-send-btn"
+        aria-label="Send message"
+        disabled
       >
-      <button class="sms-send-btn" id="sms-send-btn" aria-label="Send message" disabled>
         ➤
       </button>
     </div>

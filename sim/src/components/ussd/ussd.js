@@ -43,9 +43,11 @@ function setFeedback(message, isError = false) {
 
 function setBusy(isBusy) {
   ussdState.loading = isBusy;
-  document.querySelectorAll("#ussd-dialpad button, .ussd-shortcut-btn, .ussd-btn").forEach((button) => {
-    button.disabled = isBusy;
-  });
+  document
+    .querySelectorAll("#ussd-dialpad button, .ussd-shortcut-btn, .ussd-btn")
+    .forEach((button) => {
+      button.disabled = isBusy;
+    });
 
   if (codeInput) {
     codeInput.disabled = isBusy;
@@ -62,16 +64,18 @@ function renderSession(session) {
   setText("#ussd-network-notification", session?.network_notification, "--");
   setText(
     "#ussd-response-output",
-    session?.response || session?.network_request || session?.network_notification,
-    "No active USSD response."
+    session?.response ||
+      session?.network_request ||
+      session?.network_notification,
+    "No active USSD response.",
   );
 }
 
 function hasVisibleSessionContent(session) {
   return Boolean(
     session?.response?.trim() ||
-      session?.network_request?.trim() ||
-      session?.network_notification?.trim()
+    session?.network_request?.trim() ||
+    session?.network_notification?.trim(),
   );
 }
 
@@ -86,7 +90,9 @@ function normalizeSession(session) {
 
   const incomingHasContent = hasVisibleSessionContent(session);
   const currentHasContent = hasVisibleSessionContent(ussdState.session);
-  const cachedHasContent = hasVisibleSessionContent(ussdState.lastMeaningfulSession);
+  const cachedHasContent = hasVisibleSessionContent(
+    ussdState.lastMeaningfulSession,
+  );
 
   if (incomingHasContent) {
     ussdState.lastMeaningfulSession = {
@@ -100,7 +106,8 @@ function normalizeSession(session) {
       ...session,
       response: ussdState.lastMeaningfulSession?.response,
       network_request: ussdState.lastMeaningfulSession?.network_request,
-      network_notification: ussdState.lastMeaningfulSession?.network_notification,
+      network_notification:
+        ussdState.lastMeaningfulSession?.network_notification,
     };
   }
 
@@ -267,12 +274,14 @@ export function initUSSD() {
     void handleCancel();
   });
 
-  document.querySelector("#ussd-backspace-btn")?.addEventListener("click", () => {
-    if (codeInput) {
-      codeInput.value = codeInput.value.slice(0, -1);
-      codeInput.focus();
-    }
-  });
+  document
+    .querySelector("#ussd-backspace-btn")
+    ?.addEventListener("click", () => {
+      if (codeInput) {
+        codeInput.value = codeInput.value.slice(0, -1);
+        codeInput.focus();
+      }
+    });
 
   window.addEventListener("sidebar-item-click", (e) => {
     if (e.detail.label === "USSD dialpad") {
