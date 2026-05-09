@@ -209,6 +209,15 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo test
 ```
 
+Run without modem hardware:
+
+```bash
+cd sim/src-tauri
+SIM_BROADBAND_MOCK=1 cargo tauri dev
+```
+
+Mock mode is implemented in the root Rust modem library and documented in [MOCK_MODE.md](MOCK_MODE.md).
+
 Because this app depends on real modem hardware and ModemManager, always manually test hardware features when changing D-Bus behavior. At minimum, test launch, modem detection, signal/network status, SMS, USSD, connection actions, and any feature you touched.
 
 ## Runtime Requirements

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, env};
 
 use serde::{Deserialize, Serialize};
 use tokio::process::Command as AsyncCommand;
@@ -150,6 +150,10 @@ struct ModemContext {
 
 /// Get radio technology (2G/3G/4G/5G) from ModemManager via D-Bus
 pub async fn get_radio_tech() -> Result<String, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_modem_data().radio_tech);
+    }
+
     let context = connect_to_modem().await?;
     let modem_proxy = modem_proxy(&context).await?;
     let access_technologies: u32 = modem_proxy
@@ -162,6 +166,10 @@ pub async fn get_radio_tech() -> Result<String, String> {
 
 /// Get signal strength in dBm from ModemManager
 pub async fn get_signal_strength() -> Result<i32, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_modem_data().signal_strength.unwrap_or(-83));
+    }
+
     let context = connect_to_modem().await?;
     let modem_proxy = modem_proxy(&context).await?;
     let (quality_percent, _recent): (u32, bool) =
@@ -175,6 +183,10 @@ pub async fn get_signal_strength() -> Result<i32, String> {
 
 /// Get mobile operator/carrier name
 pub async fn get_operator_name() -> Result<String, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_modem_data().operator_name);
+    }
+
     let context = connect_to_modem().await?;
     let proxy = modem_3gpp_proxy(&context).await?;
     let operator_name: String = proxy.get_property("OperatorName").await.unwrap_or_default();
@@ -194,6 +206,10 @@ pub async fn get_operator_name() -> Result<String, String> {
 
 /// Get connection status (registered, roaming, etc.)
 pub async fn get_connection_status() -> Result<bool, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_modem_data().connected);
+    }
+
     let context = connect_to_modem().await?;
     let modem_proxy = modem_proxy(&context).await?;
     let state: i32 = modem_proxy
@@ -209,6 +225,10 @@ pub async fn get_connection_status() -> Result<bool, String> {
 
 /// Get SIM card information
 pub async fn get_sim_info() -> Result<String, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_modem_data().sim_info);
+    }
+
     let sim_management = get_sim_management().await?;
 
     if let Some(iccid) = sim_management.iccid {
@@ -227,6 +247,10 @@ pub async fn get_sim_info() -> Result<String, String> {
 }
 
 pub async fn get_sim_management() -> Result<SimManagement, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_sim_management());
+    }
+
     let context = connect_to_modem().await?;
     let modem = modem_proxy(&context).await?;
     let unlock_required = get_unlock_required_from_proxy(&modem).await?;
@@ -262,6 +286,10 @@ pub async fn unlock_sim_pin(pin: String) -> Result<(), String> {
     let trimmed_pin = pin.trim();
     if trimmed_pin.is_empty() {
         return Err("PIN cannot be empty".to_string());
+    }
+
+    if mock_modem_enabled() {
+        return Ok(());
     }
 
     let context = connect_to_modem().await?;
@@ -675,7 +703,7 @@ fn phone_numbers_match(left: &str, right: &str) -> bool {
 fn decode_possible_ucs2(value: &str) -> String {
     let trimmed = value.trim();
     if trimmed.len() < 4
-        || trimmed.len() % 4 != 0
+        || !trimmed.len().is_multiple_of(4)
         || !trimmed.chars().all(|ch| ch.is_ascii_hexdigit())
     {
         return trimmed.to_string();
@@ -1501,6 +1529,10 @@ fn registration_state_label(state: u32) -> &'static str {
 
 /// Get all modem data at once
 pub async fn get_all_modem_data() -> Result<ModemData, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_modem_data());
+    }
+
     let connected = get_connection_status().await.unwrap_or(false);
     let radio_tech = get_radio_tech()
         .await
@@ -1541,6 +1573,10 @@ pub async fn get_all_modem_data() -> Result<ModemData, String> {
 }
 
 pub async fn get_network_controls() -> Result<NetworkControls, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_network_controls());
+    }
+
     let context = connect_to_modem().await?;
     let modem = modem_proxy(&context).await?;
     let modem_3gpp = modem_3gpp_proxy(&context).await?;
@@ -1583,6 +1619,15 @@ pub async fn get_network_controls() -> Result<NetworkControls, String> {
 }
 
 pub async fn connect_network(apn: Option<String>) -> Result<String, String> {
+    if mock_modem_enabled() {
+        let apn = apn
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .unwrap_or("internet");
+        return Ok(format!("/org/freedesktop/ModemManager1/Bearer/mock-{apn}"));
+    }
+
     let context = connect_to_modem().await?;
     let proxy = modem_simple_proxy(&context).await?;
     let mut settings: HashMap<String, OwnedValue> = HashMap::new();
@@ -1603,6 +1648,10 @@ pub async fn connect_network(apn: Option<String>) -> Result<String, String> {
 }
 
 pub async fn disconnect_network() -> Result<(), String> {
+    if mock_modem_enabled() {
+        return Ok(());
+    }
+
     let context = connect_to_modem().await?;
     let proxy = modem_simple_proxy(&context).await?;
     let all_bearers_path = root_object_path();
@@ -1614,6 +1663,10 @@ pub async fn disconnect_network() -> Result<(), String> {
 }
 
 pub async fn get_registration_state() -> Result<String, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_network_controls().registration_state);
+    }
+
     let context = connect_to_modem().await?;
     let proxy = modem_3gpp_proxy(&context).await?;
 
@@ -1621,6 +1674,10 @@ pub async fn get_registration_state() -> Result<String, String> {
 }
 
 pub async fn get_roaming_state() -> Result<bool, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_network_controls().roaming);
+    }
+
     let context = connect_to_modem().await?;
     let proxy = modem_3gpp_proxy(&context).await?;
 
@@ -1628,6 +1685,10 @@ pub async fn get_roaming_state() -> Result<bool, String> {
 }
 
 pub async fn get_current_bearer_details() -> Result<Option<BearerDetails>, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_network_controls().bearer);
+    }
+
     let context = connect_to_modem().await?;
     let proxy = modem_proxy(&context).await?;
 
@@ -1635,12 +1696,32 @@ pub async fn get_current_bearer_details() -> Result<Option<BearerDetails>, Strin
 }
 
 pub async fn get_phone_status() -> Result<PhoneStatus, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_phone_status());
+    }
+
     let context = connect_to_modem().await?;
     get_phone_status_from_context(&context).await
 }
 
 pub async fn start_phone_call(number: String) -> Result<PhoneStatus, String> {
     let number = sanitize_phone_number(&number)?;
+    if mock_modem_enabled() {
+        let mut status = mock_phone_status();
+        status.current_call = Some(PhoneCall {
+            path: "/org/freedesktop/ModemManager1/Call/mock-outgoing".to_string(),
+            number: Some(number),
+            state: "Active".to_string(),
+            state_reason: "Outgoing call started in mock mode".to_string(),
+            direction: "Outgoing".to_string(),
+            multiparty: false,
+            audio_port: Some("mock-audio".to_string()),
+            audio_format: Some("PCM 16-bit".to_string()),
+        });
+        status.call_count = 1;
+        return Ok(status);
+    }
+
     let context = connect_to_modem().await?;
     let voice = modem_voice_proxy(&context).await?;
     let mut properties: HashMap<String, OwnedValue> = HashMap::new();
@@ -1662,6 +1743,10 @@ pub async fn start_phone_call(number: String) -> Result<PhoneStatus, String> {
 }
 
 pub async fn answer_phone_call() -> Result<PhoneStatus, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_phone_status());
+    }
+
     let context = connect_to_modem().await?;
     let call_path = get_primary_call_path(&context, &["Ringing in", "Waiting"]).await?;
     let call = call_proxy(&context, &call_path).await?;
@@ -1673,6 +1758,10 @@ pub async fn answer_phone_call() -> Result<PhoneStatus, String> {
 }
 
 pub async fn hangup_phone_call() -> Result<PhoneStatus, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_phone_status());
+    }
+
     let context = connect_to_modem().await?;
     let voice = modem_voice_proxy(&context).await?;
     voice
@@ -1685,6 +1774,11 @@ pub async fn hangup_phone_call() -> Result<PhoneStatus, String> {
 
 pub async fn send_phone_dtmf(tones: String) -> Result<PhoneStatus, String> {
     let tones = sanitize_dtmf_tones(&tones)?;
+    if mock_modem_enabled() {
+        let _ = tones;
+        return Ok(mock_phone_status());
+    }
+
     let context = connect_to_modem().await?;
     let call_path = get_primary_call_path(&context, &["Active"]).await?;
     let call = call_proxy(&context, &call_path).await?;
@@ -1696,6 +1790,10 @@ pub async fn send_phone_dtmf(tones: String) -> Result<PhoneStatus, String> {
 }
 
 pub async fn get_sms_threads() -> Result<Vec<SmsThread>, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_sms_threads());
+    }
+
     let context = connect_to_modem().await?;
     let messages = list_sms_messages(&context).await?;
     let mut threads: HashMap<String, SmsThread> = HashMap::new();
@@ -1729,8 +1827,7 @@ pub async fn get_sms_threads() -> Result<Vec<SmsThread>, String> {
             .and_then(|message| message.timestamp.as_deref())
             .unwrap_or("")
             .cmp(
-                &left
-                    .last_message
+                left.last_message
                     .as_ref()
                     .and_then(|message| message.timestamp.as_deref())
                     .unwrap_or(""),
@@ -1742,11 +1839,23 @@ pub async fn get_sms_threads() -> Result<Vec<SmsThread>, String> {
 }
 
 pub async fn get_sim_contacts() -> Result<Vec<SimContact>, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_sim_contacts());
+    }
+
     let context = connect_to_modem().await?;
     read_sim_contacts(&context).await
 }
 
 pub async fn get_sms_conversation(thread_id: String) -> Result<Vec<SmsMessage>, String> {
+    if mock_modem_enabled() {
+        let thread_id = sms_thread_id(&thread_id);
+        return Ok(mock_sms_messages()
+            .into_iter()
+            .filter(|message| message.thread_id == thread_id)
+            .collect());
+    }
+
     let context = connect_to_modem().await?;
     let thread_id = sms_thread_id(&thread_id);
     let messages = list_sms_messages(&context).await?;
@@ -1765,6 +1874,19 @@ pub async fn send_sms(number: String, text: String) -> Result<SmsMessage, String
     }
     if text.is_empty() {
         return Err("SMS text cannot be empty".to_string());
+    }
+
+    if mock_modem_enabled() {
+        return Ok(SmsMessage {
+            id: "mock-sms-outgoing".to_string(),
+            thread_id: sms_thread_id(&number),
+            path: "/org/freedesktop/ModemManager1/SMS/mock-outgoing".to_string(),
+            peer: number,
+            text,
+            timestamp: Some("2026-05-09T12:30:00+03:00".to_string()),
+            state: "Sent".to_string(),
+            incoming: false,
+        });
     }
 
     let context = connect_to_modem().await?;
@@ -1808,6 +1930,10 @@ pub async fn send_sms(number: String, text: String) -> Result<SmsMessage, String
 }
 
 pub async fn get_ussd_status() -> Result<UssdSession, String> {
+    if mock_modem_enabled() {
+        return Ok(mock_ussd_session(None, None));
+    }
+
     let context = connect_to_modem().await?;
     let proxy = modem_ussd_proxy(&context).await?;
 
@@ -1816,6 +1942,10 @@ pub async fn get_ussd_status() -> Result<UssdSession, String> {
 
 pub async fn initiate_ussd(code: String) -> Result<UssdSession, String> {
     let code = sanitize_ussd_code(&code)?;
+    if mock_modem_enabled() {
+        return Ok(mock_ussd_session(Some(code), None));
+    }
+
     let context = connect_to_modem().await?;
     let proxy = modem_ussd_proxy(&context).await?;
 
@@ -1835,6 +1965,10 @@ pub async fn initiate_ussd(code: String) -> Result<UssdSession, String> {
 
 pub async fn respond_to_ussd(response: String) -> Result<UssdSession, String> {
     let response = sanitize_ussd_code(&response)?;
+    if mock_modem_enabled() {
+        return Ok(mock_ussd_session(None, Some(response)));
+    }
+
     let context = connect_to_modem().await?;
     let proxy = modem_ussd_proxy(&context).await?;
     let reply: String = proxy
@@ -1846,6 +1980,10 @@ pub async fn respond_to_ussd(response: String) -> Result<UssdSession, String> {
 }
 
 pub async fn cancel_ussd() -> Result<(), String> {
+    if mock_modem_enabled() {
+        return Ok(());
+    }
+
     let context = connect_to_modem().await?;
     let proxy = modem_ussd_proxy(&context).await?;
 
@@ -1877,6 +2015,170 @@ fn is_benign_ussd_cancel_error(message: &str) -> bool {
         || normalized.contains("no active")
         || normalized.contains("unknown session")
         || normalized.contains("not active")
+}
+
+fn mock_modem_enabled() -> bool {
+    env::var("SIM_BROADBAND_MOCK")
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
+
+fn mock_sim_management() -> SimManagement {
+    SimManagement {
+        present: true,
+        iccid: Some("8925500000000000001".to_string()),
+        imsi: Some("640020000000001".to_string()),
+        pin_lock_state: "None".to_string(),
+        unlock_required: false,
+    }
+}
+
+fn mock_phone_capabilities() -> PhoneCapabilities {
+    PhoneCapabilities {
+        supported: true,
+        emergency_only: false,
+        reason: "Mock voice calling is available for UI development".to_string(),
+    }
+}
+
+fn mock_modem_data() -> ModemData {
+    ModemData {
+        connected: true,
+        radio_tech: "LTE".to_string(),
+        signal_strength: Some(-83),
+        operator_name: "MockTel TZ".to_string(),
+        sim_info: "8925500000000000001".to_string(),
+        sim_management: mock_sim_management(),
+        phone_capabilities: mock_phone_capabilities(),
+    }
+}
+
+fn mock_network_controls() -> NetworkControls {
+    NetworkControls {
+        connected: true,
+        registration_state: "Home".to_string(),
+        roaming: false,
+        bearer: Some(BearerDetails {
+            path: "/org/freedesktop/ModemManager1/Bearer/mock0".to_string(),
+            connected: true,
+            interface: Some("wwan0".to_string()),
+            apn: Some("internet".to_string()),
+        }),
+        sim_management: mock_sim_management(),
+    }
+}
+
+fn mock_sms_messages() -> Vec<SmsMessage> {
+    vec![
+        SmsMessage {
+            id: "mock-sms-1".to_string(),
+            thread_id: sms_thread_id("+255700123456"),
+            path: "/org/freedesktop/ModemManager1/SMS/mock1".to_string(),
+            peer: "+255700123456".to_string(),
+            text: "Welcome to mock modem mode. You can test SMS UI without hardware.".to_string(),
+            timestamp: Some("2026-05-09T09:15:00+03:00".to_string()),
+            state: "Received".to_string(),
+            incoming: true,
+        },
+        SmsMessage {
+            id: "mock-sms-2".to_string(),
+            thread_id: sms_thread_id("+255700123456"),
+            path: "/org/freedesktop/ModemManager1/SMS/mock2".to_string(),
+            peer: "+255700123456".to_string(),
+            text: "Thanks. I am checking the conversation layout now.".to_string(),
+            timestamp: Some("2026-05-09T09:17:00+03:00".to_string()),
+            state: "Sent".to_string(),
+            incoming: false,
+        },
+        SmsMessage {
+            id: "mock-sms-3".to_string(),
+            thread_id: sms_thread_id("+255754000111"),
+            path: "/org/freedesktop/ModemManager1/SMS/mock3".to_string(),
+            peer: "+255754000111".to_string(),
+            text: "Bundle balance: 2.4 GB remaining. Valid until 23:59.".to_string(),
+            timestamp: Some("2026-05-09T10:02:00+03:00".to_string()),
+            state: "Received".to_string(),
+            incoming: true,
+        },
+    ]
+}
+
+fn mock_sms_threads() -> Vec<SmsThread> {
+    let mut threads: HashMap<String, SmsThread> = HashMap::new();
+
+    for message in mock_sms_messages() {
+        let entry = threads
+            .entry(message.thread_id.clone())
+            .or_insert_with(|| SmsThread {
+                id: message.thread_id.clone(),
+                peer: message.peer.clone(),
+                message_count: 0,
+                last_message: None,
+            });
+
+        entry.message_count += 1;
+        entry.last_message = Some(message);
+    }
+
+    let mut threads: Vec<SmsThread> = threads.into_values().collect();
+    threads.sort_by(|left, right| right.peer.cmp(&left.peer));
+    threads
+}
+
+fn mock_sim_contacts() -> Vec<SimContact> {
+    vec![
+        SimContact {
+            id: "mock-contact-1".to_string(),
+            name: "Asha Network".to_string(),
+            number: "+255700123456".to_string(),
+            storage: "SM".to_string(),
+            index: 1,
+            last_message: mock_sms_messages()
+                .into_iter()
+                .find(|message| message.peer == "+255700123456"),
+        },
+        SimContact {
+            id: "mock-contact-2".to_string(),
+            name: "Bundle Alerts".to_string(),
+            number: "+255754000111".to_string(),
+            storage: "SM".to_string(),
+            index: 2,
+            last_message: mock_sms_messages()
+                .into_iter()
+                .find(|message| message.peer == "+255754000111"),
+        },
+    ]
+}
+
+fn mock_phone_status() -> PhoneStatus {
+    PhoneStatus {
+        capabilities: mock_phone_capabilities(),
+        current_call: None,
+        call_count: 0,
+    }
+}
+
+fn mock_ussd_session(code: Option<String>, response: Option<String>) -> UssdSession {
+    let response_text = match (code.as_deref(), response.as_deref()) {
+        (Some("*149#"), _) => "1. Data bundles\n2. Voice bundles\n3. Check balance",
+        (Some("*150#"), _) => "Mock mobile money menu\n1. Send money\n2. Withdraw\n3. Balance",
+        (_, Some("1")) => "Data bundles\n1. Daily 1GB\n2. Weekly 5GB\n3. Monthly 20GB",
+        (_, Some("2")) => "Voice bundles\n1. 30 minutes\n2. 60 minutes\n3. 180 minutes",
+        _ => "Mock balance: 2.4 GB data, 42 minutes, TZS 1,250 airtime.",
+    };
+
+    UssdSession {
+        code,
+        response: Some(response_text.to_string()),
+        state: "User response required".to_string(),
+        network_request: Some("Reply with a menu number.".to_string()),
+        network_notification: None,
+    }
 }
 
 // TODO: Add operator and scan tools: current operator code/name, network scan

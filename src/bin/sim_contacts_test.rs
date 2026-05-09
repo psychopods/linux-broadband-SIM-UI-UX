@@ -4,7 +4,10 @@ use sim_broadband_gui::{get_sim_contacts, get_sim_management};
 async fn main() {
     match get_sim_management().await {
         Ok(sim) => {
-            println!("SIM state: present={}, pin_lock_state={}, unlock_required={}", sim.present, sim.pin_lock_state, sim.unlock_required);
+            println!(
+                "SIM state: present={}, pin_lock_state={}, unlock_required={}",
+                sim.present, sim.pin_lock_state, sim.unlock_required
+            );
         }
         Err(error) => {
             eprintln!("SIM management fetch failed: {error}");
@@ -17,9 +20,7 @@ async fn main() {
             for contact in contacts.iter().take(10) {
                 println!(
                     "- [{}] {} | {}",
-                    contact.index,
-                    contact.name,
-                    contact.number
+                    contact.index, contact.name, contact.number
                 );
             }
         }

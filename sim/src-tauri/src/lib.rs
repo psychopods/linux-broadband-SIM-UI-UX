@@ -12,7 +12,7 @@ use sim_broadband_gui::{
     start_phone_call as start_modem_phone_call, unlock_sim_pin, BearerDetails, ModemData,
     NetworkControls, PhoneStatus, SimContact, SimManagement, SmsMessage, SmsThread, UssdSession,
 };
-use std::process::Command;
+use std::{env, process::Command};
 use tauri_plugin_updater::UpdaterExt;
 use url::Url;
 
@@ -311,6 +311,25 @@ async fn install_app_update(app: tauri::AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 async fn check_runtime_permissions() -> Result<RuntimePermissionStatus, String> {
+    if env::var("SIM_BROADBAND_MOCK")
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+    {
+        return Ok(RuntimePermissionStatus {
+            dialout_member: true,
+            plugdev_member: true,
+            groups: vec!["mock".to_string()],
+            dbus_modemmanager_access: true,
+            ready_for_appimage_modem_access: true,
+            recommendation: None,
+        });
+    }
+
     let groups = Command::new("id")
         .arg("-nG")
         .output()

@@ -55,6 +55,15 @@ cd sim/src-tauri
 cargo tauri dev
 ```
 
+Run the UI with sample modem data when you do not have hardware available:
+
+```bash
+cd sim/src-tauri
+SIM_BROADBAND_MOCK=1 cargo tauri dev
+```
+
+Mock mode is documented in [docs/MOCK_MODE.md](docs/MOCK_MODE.md). It is ideal for frontend, copy, layout, and documentation work. Backend changes that touch ModemManager behavior still need real hardware testing before release.
+
 Build release bundles locally:
 
 ```bash

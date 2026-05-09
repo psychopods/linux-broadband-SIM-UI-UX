@@ -4,9 +4,17 @@ A Linux desktop application for managing mobile broadband SIM modems. Monitor co
 
 Built with [Tauri 2](https://tauri.app/) (Rust + WebKit2GTK) and powered by [ModemManager](https://modemmanager.org/) over D-Bus.
 
+## Why This Exists
+
+Linux already has powerful modem tooling such as `mmcli`, but most people do not want to memorize D-Bus paths or terminal commands just to check signal, send a message, run a USSD code, or connect mobile data. SIM Broadband Manager aims to be the approachable desktop layer on top of ModemManager: useful for everyday Linux users, still transparent enough for hardware tinkerers.
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and pull request guidelines.
 
 See [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) for an app architecture walkthrough, frontend/backend file map, and guidance on where to make common changes.
+
+See [docs/MOCK_MODE.md](docs/MOCK_MODE.md) to run the UI without modem hardware.
+
+See [docs/GOOD_FIRST_ISSUES.md](docs/GOOD_FIRST_ISSUES.md) for contributor-friendly starter tasks.
 
 See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community participation and behavior expectations.
 
@@ -24,6 +32,17 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting and supported version
 - **SIM Contacts** — browse the phonebook stored on your SIM card
 - **SIM Management** — PIN unlock, lock state display
 - **Auto-updater** — built-in update check with signed AppImage delivery via GitHub Releases
+
+---
+
+## Screenshots
+
+Screenshots and short demo GIFs belong in `docs/screenshots/` so contributors can see the app before installing it. Recommended captures:
+
+- Network status and connection controls
+- SMS conversation view
+- USSD dialpad/session flow
+- Contacts and SIM details
 
 ---
 
@@ -63,6 +82,16 @@ sudo snap install sim-broadband-manager
 | D-Bus        | System bus access to `org.freedesktop.ModemManager1` |
 | Modem        | USB or PCIe modem recognised by ModemManager         |
 
+### Known / Tested Hardware
+
+| Hardware | Status | Notes |
+| --- | --- | --- |
+| Sierra Wireless EM7455 | Target hardware | Primary development modem |
+| ModemManager-compatible USB/PCIe modem | Expected | Should work when ModemManager exposes standard modem, SIM, SMS, USSD, bearer, and optional voice interfaces |
+| No modem hardware | Supported for UI development | Use mock mode with `SIM_BROADBAND_MOCK=1` |
+
+If you test another modem, please open an issue or PR updating this table with your Linux distro, modem model, carrier/SIM, and which features worked.
+
 ### Permissions (AppImage)
 
 The app communicates with ModemManager over the system D-Bus. If your modem isn't detected, ensure your user is in the `dialout` group:
@@ -75,6 +104,26 @@ sudo usermod -aG dialout $USER
 ---
 
 ## Building from Source
+
+### Contributor Quick Start
+
+Use mock mode if you want to work on the UI without a physical modem:
+
+```bash
+git clone https://github.com/psychopods/linux-broadband-SIM-UI-UX.git
+cd linux-broadband-SIM-UI-UX/sim/src-tauri
+SIM_BROADBAND_MOCK=1 cargo tauri dev
+```
+
+Run the Rust checks:
+
+```bash
+cd linux-broadband-SIM-UI-UX
+cargo fmt --all
+cargo check
+cd sim/src-tauri
+cargo check
+```
 
 ### Prerequisites
 
