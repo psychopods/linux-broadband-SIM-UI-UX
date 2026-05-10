@@ -1,5 +1,5 @@
 name: sim-broadband-manager
-version: 2.0.0
+version: 3.0.0
 summary: SIM Broadband Manager for modem status and network control
 description: |
   Desktop application to manage broadband SIM modems, monitor connectivity,
