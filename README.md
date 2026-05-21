@@ -167,4 +167,4 @@ The AppImage and `.deb` will be output to `sim/src-tauri/target/release/bundle/`
 
 ## License
 
-[MIT](LICENSE)
+[GPL-3.0-or-later](LICENSE)
