@@ -189,7 +189,7 @@
 }
 
 .phone-pane-card--dialer {
-  max-width: min(760px, 100%);
+  max-width: min(880px, 100%);
 }
 
 .phone-pane-scroll {
@@ -556,3 +556,386 @@
     width: 100%;
   }
 }
+
+/* Two-column responsive desktop layout for Dialer */
+@media (min-width: 768px) {
+  .phone-pane-card--dialer .phone-pane-scroll {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    grid-template-rows: auto auto auto 1fr;
+    column-gap: 32px;
+    row-gap: 0;
+    align-items: start;
+  }
+
+  .phone-pane-card--dialer .phone-target-card {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0 0 16px 0;
+  }
+
+  .phone-pane-card--dialer .phone-field {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0 0 16px 0;
+  }
+
+  .phone-pane-card--dialer .phone-actions {
+    grid-column: 1;
+    grid-row: 3;
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-start;
+  }
+
+  .phone-pane-card--dialer .phone-actions .phone-btn {
+    flex: 1 1 calc(50% - 10px);
+    box-sizing: border-box;
+    text-align: center;
+    padding: 12px 8px;
+    font-size: 0.9rem;
+  }
+
+  .phone-pane-card--dialer .phone-actions #phone-call-btn,
+  .phone-pane-card--dialer .phone-actions #phone-hangup-btn {
+    flex: 1 1 100%;
+  }
+
+  .phone-pane-card--dialer .phone-feedback {
+    grid-column: 1;
+    grid-row: 4;
+    margin-top: 14px;
+  }
+
+  .phone-pane-card--dialer .phone-dialpad {
+    grid-column: 2;
+    grid-row: 1 / 5;
+    align-self: start;
+    margin: 0;
+  }
+}
+
+/* 3-column stats layout on wider viewports to reduce vertical space */
+@media (min-width: 768px) {
+  .phone-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Compact heights adjustments (resolves pad cutoff without scrolling) */
+@media (max-height: 768px) {
+  .phone-panel {
+    padding: 16px;
+    padding-bottom: 0;
+  }
+
+  .phone-panel-header {
+    margin-bottom: 4px;
+  }
+
+  .phone-eyebrow {
+    margin-bottom: 2px;
+  }
+
+  .phone-panel-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .phone-capability-copy {
+    font-size: 0.85rem;
+    margin-top: 2px;
+  }
+
+  .phone-tab-bar {
+    margin-top: 10px;
+  }
+
+  .phone-tab-btn {
+    padding: 7px 10px;
+    font-size: 0.82rem;
+  }
+
+  .phone-tab-body {
+    margin-top: 10px;
+  }
+
+  .phone-pane-card {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .phone-pane-card--dialer .phone-pane-scroll {
+    column-gap: 20px;
+  }
+
+  .phone-target-card {
+    padding: 12px;
+    border-radius: 14px;
+    margin-bottom: 10px;
+  }
+
+  .phone-target-name {
+    font-size: 1.15rem;
+  }
+
+  .phone-target-number {
+    font-size: 0.85rem;
+  }
+
+  #phone-favorite-toggle {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  .phone-field {
+    margin: 8px 0;
+  }
+
+  .phone-field span {
+    font-size: 0.82rem;
+  }
+
+  .phone-field input {
+    padding: 9px 12px;
+    font-size: 0.88rem;
+    border-radius: 10px;
+  }
+
+  .phone-dialpad {
+    gap: 8px;
+  }
+
+  .phone-dialpad button {
+    padding: 11px;
+    font-size: 1.05rem;
+    border-radius: 12px;
+  }
+
+  .phone-actions {
+    margin-top: 6px;
+    gap: 8px;
+  }
+
+  .phone-pane-card--dialer .phone-actions .phone-btn {
+    padding: 9px 6px;
+    font-size: 0.82rem;
+    border-radius: 10px;
+  }
+
+  .phone-feedback {
+    margin-top: 8px;
+    font-size: 0.82rem;
+  }
+
+  /* Live tab adjustments */
+  .phone-call-display {
+    min-height: 70px;
+    padding: 12px;
+    font-size: 0.92rem;
+  }
+
+  .phone-stat-grid {
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .phone-stat {
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .phone-stat span {
+    margin-bottom: 4px;
+    font-size: 0.75rem;
+  }
+
+  .phone-stat strong {
+    font-size: 0.88rem;
+  }
+
+  /* Recents & Favourites list adjustments */
+  .phone-list {
+    margin-top: 10px;
+    gap: 8px;
+  }
+
+  .phone-list-item {
+    padding: 10px 12px;
+  }
+
+  .phone-list-item-title,
+  .phone-favorite-name {
+    font-size: 0.9rem;
+  }
+
+  .phone-list-item-subtitle,
+  .phone-favorite-number {
+    font-size: 0.8rem;
+  }
+
+  .phone-list-item-meta,
+  .phone-favorite-meta {
+    margin-top: 4px;
+    font-size: 0.75rem;
+    gap: 4px 8px;
+  }
+
+  .phone-favorite-card {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .phone-empty-state {
+    padding: 12px;
+  }
+}
+
+/* Extra-tight height layout for extremely small screens/resolutions */
+@media (max-height: 600px) {
+  .phone-panel {
+    padding: 10px;
+    padding-bottom: 0;
+  }
+
+  .phone-panel-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .phone-tab-bar {
+    margin-top: 6px;
+  }
+
+  .phone-tab-btn {
+    padding: 5px 8px;
+    font-size: 0.8rem;
+  }
+
+  .phone-tab-body {
+    margin-top: 6px;
+  }
+
+  .phone-pane-card {
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .phone-pane-card--dialer .phone-pane-scroll {
+    column-gap: 16px;
+  }
+
+  .phone-target-card {
+    padding: 8px;
+    border-radius: 10px;
+    margin-bottom: 6px;
+  }
+
+  .phone-target-name {
+    font-size: 1.05rem;
+  }
+
+  .phone-target-number {
+    font-size: 0.8rem;
+  }
+
+  #phone-favorite-toggle {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+
+  .phone-field {
+    margin: 4px 0;
+    gap: 4px;
+  }
+
+  .phone-field input {
+    padding: 7px 10px;
+    font-size: 0.82rem;
+  }
+
+  .phone-dialpad {
+    gap: 6px;
+  }
+
+  .phone-dialpad button {
+    padding: 8px;
+    font-size: 0.95rem;
+    border-radius: 10px;
+  }
+
+  .phone-actions {
+    margin-top: 4px;
+    gap: 6px;
+  }
+
+  .phone-pane-card--dialer .phone-actions .phone-btn {
+    padding: 7px 4px;
+    font-size: 0.78rem;
+    border-radius: 8px;
+  }
+
+  /* Live tab adjustments */
+  .phone-call-display {
+    min-height: 50px;
+    padding: 8px 10px;
+    font-size: 0.88rem;
+  }
+
+  .phone-stat-grid {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .phone-stat {
+    padding: 8px;
+    border-radius: 8px;
+  }
+
+  .phone-stat span {
+    margin-bottom: 2px;
+    font-size: 0.7rem;
+  }
+
+  .phone-stat strong {
+    font-size: 0.82rem;
+  }
+
+  /* Recents & Favourites list adjustments */
+  .phone-list {
+    margin-top: 6px;
+    gap: 6px;
+  }
+
+  .phone-list-item {
+    padding: 8px 10px;
+    border-radius: 10px;
+  }
+
+  .phone-list-item-title,
+  .phone-favorite-name {
+    font-size: 0.85rem;
+  }
+
+  .phone-list-item-subtitle,
+  .phone-favorite-number {
+    font-size: 0.78rem;
+  }
+
+  .phone-list-item-meta,
+  .phone-favorite-meta {
+    margin-top: 2px;
+    font-size: 0.7rem;
+    gap: 2px 6px;
+  }
+
+  .phone-favorite-card {
+    padding: 8px 10px;
+    border-radius: 10px;
+  }
+
+  .phone-empty-state {
+    padding: 10px;
+  }
+}
+

@@ -1,0 +1,24 @@
+id: com.github.psychopods.sim_broadband_manager
+runtime: org.gnome.Platform
+runtime-version: '46'
+sdk: org.gnome.Sdk
+command: sim-broadband-manager
+finish-args:
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  - --share=ipc
+  - --share=network
+  - --talk-name=org.freedesktop.ModemManager1
+  - --talk-name=org.freedesktop.NetworkManager
+modules:
+  - name: sim-broadband-manager
+    buildsystem: simple
+    build-commands:
+      - cargo build --manifest-path=Cargo.toml --release
+      - install -Dm755 target/release/sim /app/bin/sim-broadband-manager
+      - install -Dm644 icons/128x128.png /app/share/icons/hicolor/128x128/apps/com.github.psychopods.sim_broadband_manager.png
+      - install -Dm644 sim-broadband-manager.desktop /app/share/applications/com.github.psychopods.sim_broadband_manager.desktop
+    sources:
+      - type: dir
+        path: .

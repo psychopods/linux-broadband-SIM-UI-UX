@@ -96,6 +96,15 @@ jobs:
           }
           EOF
 
+      - name: Build RPM package
+        run: |
+          sudo apt-get update && sudo apt-get install -y rpm
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          mkdir -p rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          tar -czf rpmbuild/SOURCES/sim-broadband-manager-${VERSION}.tar.gz --exclude=rpmbuild --exclude=target --exclude=sim/src-tauri/target .
+          rpmbuild --define "_topdir $(pwd)/rpmbuild" --define "ver ${VERSION}" -bb sim-broadband-manager.spec
+
       - name: Publish GitHub Release assets
         uses: softprops/action-gh-release@v2
         with:
@@ -103,6 +112,7 @@ jobs:
             sim/src-tauri/target/release/bundle/appimage/*.AppImage
             sim/src-tauri/target/release/bundle/appimage/*.sig
             sim/src-tauri/target/release/bundle/deb/*.deb
+            rpmbuild/RPMS/x86_64/*.rpm
             sim/src-tauri/target/release/updater/latest.json
 
   build-windows:
@@ -160,3 +170,26 @@ jobs:
         with:
           files: |
             *.snap
+
+  build-flatpak:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup flatpak-builder
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: sim-broadband-manager.flatpak
+          manifest-path: com.github.psychopods.sim_broadband_manager.yaml
+          cache: true
+          gpg-sign: false
+
+      - name: Upload flatpak bundle to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            sim-broadband-manager.flatpak
+

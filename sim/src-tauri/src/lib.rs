@@ -1,8 +1,8 @@
 use serde::Serialize;
 use sim_broadband_gui::{
-    answer_phone_call as answer_modem_phone_call, cancel_ussd, connect_network, disconnect_network,
-    get_all_modem_data, get_connection_status, get_current_bearer_details, get_network_controls,
-    get_operator_name, get_phone_status as fetch_phone_status, get_radio_tech,
+    answer_phone_call as answer_modem_phone_call, cancel_ussd, connect_network, delete_sms as delete_modem_sms,
+    disconnect_network, get_all_modem_data, get_connection_status, get_current_bearer_details,
+    get_network_controls, get_operator_name, get_phone_status as fetch_phone_status, get_radio_tech,
     get_registration_state, get_roaming_state, get_signal_strength,
     get_sim_contacts as fetch_sim_contacts, get_sim_info, get_sim_management,
     get_sms_conversation as fetch_sms_conversation, get_sms_threads as fetch_sms_threads,
@@ -137,6 +137,11 @@ async fn get_sms_conversation(thread_id: String) -> Result<Vec<SmsMessage>, Stri
 #[tauri::command]
 async fn send_sms(number: String, text: String) -> Result<SmsMessage, String> {
     send_modem_sms(number, text).await
+}
+
+#[tauri::command]
+async fn delete_sms(path: String) -> Result<(), String> {
+    delete_modem_sms(path).await
 }
 
 #[tauri::command]
@@ -418,6 +423,7 @@ pub fn run() {
             get_sim_contacts,
             get_sms_conversation,
             send_sms,
+            delete_sms,
             get_ussd_status,
             execute_ussd,
             respond_ussd,

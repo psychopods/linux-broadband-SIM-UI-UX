@@ -1929,6 +1929,22 @@ pub async fn send_sms(number: String, text: String) -> Result<SmsMessage, String
     })
 }
 
+pub async fn delete_sms(path: String) -> Result<(), String> {
+    if mock_modem_enabled() {
+        return Ok(());
+    }
+
+    let context = connect_to_modem().await?;
+    let messaging = modem_messaging_proxy(&context).await?;
+    let owned_path =
+        OwnedObjectPath::try_from(path.as_str()).map_err(|e| format!("Invalid SMS path: {e}"))?;
+
+    messaging
+        .call::<_, _, ()>("Delete", &(owned_path,))
+        .await
+        .map_err(|e| format!("Failed to delete SMS: {e}"))
+}
+
 pub async fn get_ussd_status() -> Result<UssdSession, String> {
     if mock_modem_enabled() {
         return Ok(mock_ussd_session(None, None));

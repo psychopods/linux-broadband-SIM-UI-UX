@@ -1,54 +1,87 @@
 <section id="sms-tab" class="sms-container" style="display: none">
-  <div class="sms-contacts-panel">
+  <!-- Left Side: Contacts/Threads Panel -->
+  <div class="sms-contacts-panel glass-panel">
     <div class="sms-contacts-header">
-      <h2>Messages</h2>
+      <div class="sms-header-top">
+        <h2>Messages</h2>
+        <button id="sms-new-chat-btn" class="sms-icon-btn glow-btn" aria-label="New Message" title="New Message">
+          <img src="/assets/icons/icons8-add-user-male-96.png" alt="New Message" />
+        </button>
+      </div>
+      <div class="sms-search-wrapper">
+        <input type="text" id="sms-search-input" class="sms-search-input" placeholder="Search conversations..." />
+      </div>
     </div>
     <div class="sms-contacts-list" id="sms-contacts-list">
       <!-- Contact items will be added dynamically -->
-      <div class="sms-contact-item" data-contact-id="1">
-        <div class="sms-contact-avatar">A</div>
-        <div class="sms-contact-info">
-          <div class="sms-contact-name">Alice</div>
-          <div class="sms-contact-preview">Hey, how are you?</div>
+    </div>
+  </div>
+
+  <!-- Right Side: Chat Panel -->
+  <div class="sms-chat-panel glass-panel">
+    <!-- Chat Header -->
+    <div class="sms-chat-header" id="sms-chat-header">
+      <div class="sms-chat-contact-info">
+        <div class="sms-chat-avatar-glow" id="sms-header-avatar">?</div>
+        <div class="sms-chat-meta">
+          <h2 id="sms-chat-title">Select a contact</h2>
+          <span id="sms-chat-subtitle" class="sms-subtitle">No active session</span>
         </div>
       </div>
-      <div class="sms-contact-item" data-contact-id="2">
-        <div class="sms-contact-avatar">B</div>
-        <div class="sms-contact-info">
-          <div class="sms-contact-name">Bob</div>
-          <div class="sms-contact-preview">See you later</div>
+      <div class="sms-chat-actions">
+        <button id="sms-call-btn" class="sms-action-btn stroke-glow" aria-label="Call contact" title="Call Contact" disabled>
+          <img src="/assets/icons/icons8-phone-96.png" alt="Call Contact" />
+        </button>
+        <button id="sms-clear-btn" class="sms-action-btn stroke-glow" aria-label="Clear chat" title="Clear Chat" disabled>
+          <img src="/assets/icons/icons8-bin-windows-96.png" alt="Clear Chat" />
+        </button>
+      </div>
+    </div>
+
+    <!-- Messages Display Area -->
+    <div class="sms-messages-area" id="sms-messages-area">
+      <div class="sms-placeholder">Select a contact to view messages</div>
+    </div>
+
+    <!-- Message Composition Area -->
+    <div class="sms-input-area-wrapper">
+      <div class="sms-input-area glass-input-card">
+        <input
+          type="text"
+          id="sms-input"
+          class="sms-message-input"
+          placeholder="Write a message..."
+          disabled
+        />
+        <div class="sms-input-controls">
+          <span id="sms-char-counter" class="sms-char-counter">0/160</span>
+          <button
+            class="sms-send-btn glow-btn"
+            id="sms-send-btn"
+            aria-label="Send message"
+            disabled
+          >
+            <img src="/assets/icons/icons8-send-96.png" alt="Send" />
+          </button>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="sms-chat-panel">
-    <div class="sms-chat-header" id="sms-chat-header">
-      <h2 id="sms-chat-title">Select a contact</h2>
-      <div class="sms-chat-actions">
+  <!-- New Message Modal -->
+  <div id="sms-new-chat-modal" class="sms-modal" style="display: none">
+    <div class="sms-modal-content glass-panel">
+      <div class="sms-modal-header">
+        <h3>New Conversation</h3>
+        <button id="sms-new-chat-close-btn" class="sms-modal-close" aria-label="Close modal">×</button>
       </div>
-    </div>
-
-    <div class="sms-messages-area" id="sms-messages-area">
-      <div class="sms-placeholder">Select a contact to view messages</div>
-    </div>
-
-    <div class="sms-input-area">
-      <input
-        type="text"
-        id="sms-input"
-        class="sms-message-input"
-        placeholder="Write a message..."
-        disabled
-      />
-      <button
-        class="sms-send-btn"
-        id="sms-send-btn"
-        aria-label="Send message"
-        disabled
-      >
-        ➤
-      </button>
+      <div class="sms-modal-body">
+        <input type="text" id="sms-new-chat-number" class="sms-search-input" placeholder="Enter recipient phone number..." />
+      </div>
+      <div class="sms-modal-actions">
+        <button id="sms-new-chat-cancel" class="sms-action-btn">Cancel</button>
+        <button id="sms-new-chat-confirm" class="sms-action-btn active">Start Chat</button>
+      </div>
     </div>
   </div>
 </section>

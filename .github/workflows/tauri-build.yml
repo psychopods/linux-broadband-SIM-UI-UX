@@ -43,6 +43,14 @@ jobs:
         working-directory: sim/src-tauri
         run: cargo tauri build --bundles deb,appimage
 
+      - name: Build RPM package
+        run: |
+          sudo apt-get update && sudo apt-get install -y rpm
+          VERSION=$(grep '"version":' sim/src-tauri/tauri.conf.json | head -n 1 | cut -d '"' -f 4)
+          mkdir -p rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          tar -czf rpmbuild/SOURCES/sim-broadband-manager-${VERSION}.tar.gz --exclude=rpmbuild --exclude=target --exclude=sim/src-tauri/target .
+          rpmbuild --define "_topdir $(pwd)/rpmbuild" --define "ver ${VERSION}" -bb sim-broadband-manager.spec
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -50,3 +58,27 @@ jobs:
           path: |
             sim/src-tauri/target/release/bundle/deb/**
             sim/src-tauri/target/release/bundle/appimage/**
+            rpmbuild/RPMS/x86_64/*.rpm
+
+  build-flatpak:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup flatpak-builder
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: sim-broadband-manager.flatpak
+          manifest-path: com.github.psychopods.sim_broadband_manager.yaml
+          cache: true
+          gpg-sign: false
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-bundles
+          path: sim-broadband-manager.flatpak
+

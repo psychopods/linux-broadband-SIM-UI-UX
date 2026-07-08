@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=SIM Broadband Manager
+Comment=Monitor and manage broadband SIM modems
+Exec=sim-broadband-manager
+Icon=com.github.psychopods.sim_broadband_manager
+Categories=Utility;Network;
+Terminal=false

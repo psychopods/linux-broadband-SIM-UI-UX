@@ -89,10 +89,10 @@ function getSignalLevel(dbm) {
 }
 
 const SIGNAL_ICONS = {
-  none: "/assets/icons/signal-none.png",
-  low: "/assets/icons/signal-low.png",
-  mid: "/assets/icons/signal-mid.png",
-  high: "/assets/icons/signal-high.png",
+  none: "/assets/icons/icons8-signal-96.png",
+  low: "/assets/icons/icons8-low-connection-96.png",
+  mid: "/assets/icons/icons8-signal-96.png",
+  high: "/assets/icons/icons8-network-bar-96.png",
 };
 
 function setNetworkSignal(dbm) {

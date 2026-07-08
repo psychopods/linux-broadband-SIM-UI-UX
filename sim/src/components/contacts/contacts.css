@@ -1,3 +1,7 @@
+.contacts-container [hidden] {
+  display: none !important;
+}
+
 .contacts-container {
   position: absolute;
   top: 0;

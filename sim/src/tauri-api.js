@@ -167,6 +167,12 @@ export async function sendSms(number, text) {
   });
 }
 
+export async function deleteSms(path) {
+  return await getInvoke()("delete_sms", {
+    path: typeof path === "string" ? path.trim() : "",
+  });
+}
+
 export async function getUssdStatus() {
   try {
     return await getInvoke()("get_ussd_status");

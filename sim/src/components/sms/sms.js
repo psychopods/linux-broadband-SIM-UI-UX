@@ -24,6 +24,7 @@ const smsState = {
   loadingThreads: false,
   loadingConversation: false,
   sending: false,
+  searchQuery: "",
 };
 
 function loadReadState() {
@@ -299,6 +300,16 @@ function setComposerEnabled(enabled) {
   if (sendBtn) {
     sendBtn.disabled = !enabled || smsState.sending;
   }
+
+  const charCounter = document.querySelector("#sms-char-counter");
+  if (charCounter) {
+    if (!enabled) {
+      charCounter.textContent = "";
+    } else {
+      const len = messageInput ? messageInput.value.length : 0;
+      charCounter.textContent = `${len}/160`;
+    }
+  }
 }
 
 function renderContacts() {
@@ -314,20 +325,31 @@ function renderContacts() {
     return;
   }
 
-  if (smsState.threads.length === 0) {
+  let displayedThreads = smsState.threads;
+  if (smsState.searchQuery) {
+    const query = smsState.searchQuery.toLowerCase().trim();
+    displayedThreads = smsState.threads.filter((thread) => {
+      return (
+        thread.peer.toLowerCase().includes(query) ||
+        (thread.last_message?.text || "").toLowerCase().includes(query)
+      );
+    });
+  }
+
+  if (displayedThreads.length === 0) {
     contactsList.innerHTML =
-      '<div class="sms-placeholder">No modem messages found</div>';
-    smsState.renderedThreadsKey = "__empty__";
+      '<div class="sms-placeholder">No conversations found</div>';
+    smsState.renderedThreadsKey = `__empty__:${smsState.searchQuery}`;
     updateSidebarUnreadBadge();
     return;
   }
 
-  const threadsKey = `${getThreadsKey(smsState.threads)}::${smsState.selectedThreadId || ""}`;
+  const threadsKey = `${getThreadsKey(displayedThreads)}::${smsState.selectedThreadId || ""}::${smsState.searchQuery || ""}`;
   if (threadsKey === smsState.renderedThreadsKey) {
     return;
   }
 
-  contactsList.innerHTML = smsState.threads
+  contactsList.innerHTML = displayedThreads
     .map((thread) => {
       const preview = thread.last_message?.text?.trim() || "No messages yet";
       const activeClass =
@@ -381,7 +403,7 @@ function renderMessages(messages, placeholder, options = {}) {
     if (emptyKey === smsState.renderedConversationKey) {
       return;
     }
-    messagesArea.innerHTML = `<div class="sms-placeholder">${escapeHtml(placeholder)}</div>`;
+    messagesArea.innerHTML = `<div class="sms-placeholder"><div class="pulse-icon">💬</div>${escapeHtml(placeholder)}</div>`;
     smsState.renderedConversationKey = emptyKey;
     return;
   }
@@ -422,7 +444,26 @@ function setActiveThread(threadId, peer, label = "") {
   smsState.selectedLabel = label || peer || "";
 
   if (chatTitle) {
-    chatTitle.textContent = smsState.selectedLabel || "Select a conversation";
+    chatTitle.textContent = smsState.selectedLabel || "Select a contact";
+  }
+
+  const subtitle = document.querySelector("#sms-chat-subtitle");
+  if (subtitle) {
+    subtitle.textContent = peer ? `Session with ${peer}` : "No active session";
+  }
+
+  const avatar = document.querySelector("#sms-header-avatar");
+  if (avatar) {
+    avatar.textContent = getAvatarLabel(peer);
+  }
+
+  const callBtn = document.querySelector("#sms-call-btn");
+  const clearBtn = document.querySelector("#sms-clear-btn");
+  if (callBtn) {
+    callBtn.disabled = !peer;
+  }
+  if (clearBtn) {
+    clearBtn.disabled = !peer;
   }
 
   setComposerEnabled(Boolean(peer));
@@ -460,9 +501,6 @@ async function loadConversation(threadId, options = {}) {
       autoScroll,
     });
 
-    // Only mark as read if this is not the very first load (previousKey exists),
-    // or if the user explicitly triggered the load (e.g. clicked a thread).
-    // This prevents the badge from flashing in and immediately disappearing on startup.
     const isInitialLoad = !previousKey || previousKey === "__loading__";
     if (markReadIfAtBottom && !isInitialLoad && (autoScroll || wasNearBottom)) {
       markThreadAsRead(threadId, messages);
@@ -483,7 +521,7 @@ async function selectThread(threadId, peer) {
     setActiveThread(null, "", "");
     smsState.lastConversationMessages = [];
     setNewMessagesIndicator(0);
-    renderMessages([], "Select a conversation to view messages");
+    renderMessages([], "Select a contact to view messages");
     return;
   }
 
@@ -610,6 +648,11 @@ async function handleSendMessage() {
   try {
     await sendSms(number, text);
     messageInput.value = "";
+    const charCounter = document.querySelector("#sms-char-counter");
+    if (charCounter) {
+      charCounter.textContent = "0/160";
+      charCounter.style.color = "";
+    }
     await refreshSMS();
 
     const matchingThread = findThreadByPeer(number);
@@ -663,6 +706,141 @@ export function initSMS() {
     );
   });
   messagesArea?.parentElement?.appendChild(newMessagesIndicator);
+
+  // New element references
+  const searchInput = document.querySelector("#sms-search-input");
+  const newChatBtn = document.querySelector("#sms-new-chat-btn");
+  const callBtn = document.querySelector("#sms-call-btn");
+  const clearBtn = document.querySelector("#sms-clear-btn");
+  const charCounter = document.querySelector("#sms-char-counter");
+
+  // Hook up search filter
+  searchInput?.addEventListener("input", () => {
+    smsState.searchQuery = searchInput.value;
+    renderContacts();
+  });
+
+  // Modal element references
+  const modal = document.querySelector("#sms-new-chat-modal");
+  const modalInput = document.querySelector("#sms-new-chat-number");
+  const modalCancel = document.querySelector("#sms-new-chat-cancel");
+  const modalConfirm = document.querySelector("#sms-new-chat-confirm");
+  const modalClose = document.querySelector("#sms-new-chat-close-btn");
+
+  // Hook up composition modal show trigger
+  newChatBtn?.addEventListener("click", () => {
+    if (modal) {
+      modal.style.display = "flex";
+      modalInput?.focus();
+    }
+  });
+
+  // Modal hide logic
+  const hideModal = () => {
+    if (modal) {
+      modal.style.display = "none";
+    }
+    if (modalInput) {
+      modalInput.value = "";
+    }
+  };
+
+  modalCancel?.addEventListener("click", hideModal);
+  modalClose?.addEventListener("click", hideModal);
+
+  const startChatFromModal = () => {
+    const number = modalInput?.value.trim() || "";
+    if (number) {
+      hideModal();
+      const event = new CustomEvent("sms-compose-recipient", {
+        detail: { number, label: number }
+      });
+      window.dispatchEvent(event);
+    } else {
+      alert("Please enter a valid phone number.");
+    }
+  };
+
+  modalConfirm?.addEventListener("click", startChatFromModal);
+  modalInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      startChatFromModal();
+    }
+  });
+
+  // Hook up phone call button
+  callBtn?.addEventListener("click", async () => {
+    const number = smsState.selectedPeer;
+    if (!number) return;
+    try {
+      const { startPhoneCall } = await import("../../tauri-api.js");
+      await startPhoneCall(number);
+      // Dispatch sidebar change to Phone tab
+      const event = new CustomEvent("sidebar-item-click", {
+        detail: { label: "Phone" }
+      });
+      window.dispatchEvent(event);
+    } catch (error) {
+      console.error("Failed to start call:", error);
+      alert(`Failed to start call: ${error}`);
+    }
+  });
+
+  // Hook up clear chat trigger (Real SMS deletion)
+  clearBtn?.addEventListener("click", async () => {
+    const number = smsState.selectedPeer;
+    const threadId = smsState.selectedThreadId;
+    if (!number || !threadId) return;
+
+    if (confirm(`Are you sure you want to delete all messages in this conversation with ${number}? This will permanently remove them from the modem.`)) {
+      smsState.sending = true; // Block UI inputs
+      setComposerEnabled(false);
+      renderMessages([], "Deleting conversation...");
+
+      try {
+        const { deleteSms } = await import("../../tauri-api.js");
+        
+        // Loop over and delete each message in the thread
+        const messagesToDelete = [...smsState.lastConversationMessages];
+        for (const msg of messagesToDelete) {
+          if (msg.path) {
+            await deleteSms(msg.path);
+          }
+        }
+        
+        // Filter out thread from state locally
+        smsState.threads = smsState.threads.filter(t => t.id !== threadId);
+        smsState.renderedThreadsKey = "";
+        
+        // Go back to empty thread state
+        await selectThread(null, "");
+        await refreshSMS();
+      } catch (error) {
+        console.error("Failed to delete thread messages:", error);
+        alert(`Failed to delete conversation: ${error}`);
+        await loadConversation(threadId, { showLoading: false });
+      } finally {
+        smsState.sending = false;
+        setComposerEnabled(Boolean(smsState.selectedPeer));
+      }
+    }
+  });
+
+  // Hook up character limit counter
+  messageInput?.addEventListener("input", () => {
+    const len = messageInput.value.length;
+    if (charCounter) {
+      if (len <= 160) {
+        charCounter.textContent = `${len}/160`;
+        charCounter.style.color = "";
+      } else {
+        const parts = Math.ceil(len / 153);
+        charCounter.textContent = `${len} (${parts} SMS)`;
+        charCounter.style.color = "#ff9800";
+      }
+    }
+  });
 
   window.addEventListener("sidebar-item-click", (e) => {
     if (e.detail.label === "SMS") {
@@ -718,7 +896,7 @@ export function initSMS() {
 
   setComposerEnabled(false);
   renderContacts();
-  renderMessages([], "Select a conversation to view messages");
+  renderMessages([], "Select a contact to view messages");
   updateSidebarUnreadBadge();
 
   messagesArea?.addEventListener("scroll", () => {

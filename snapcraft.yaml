@@ -1,5 +1,5 @@
 name: sim-broadband-manager
-version: 3.0.0
+adopt-info: sim-broadband-manager
 summary: SIM Broadband Manager for modem status and network control
 description: |
   Desktop application to manage broadband SIM modems, monitor connectivity,
@@ -21,15 +21,8 @@ apps:
       - home
       - network
       - network-control
-      - dbus
-    slots:
-      - dbus
-
-plugs:
-  dbus:
-    interface: dbus
-    bus: system
-    name: org.freedesktop.ModemManager1
+      - modem-manager
+      - network-manager
 
 parts:
   sim-broadband-manager:
@@ -37,6 +30,7 @@ parts:
     source: .
     source-type: git
     override-build: |
+      snapcraftctl set-version "$(grep '"version":' sim/src-tauri/tauri.conf.json | head -n 1 | cut -d '"' -f 4)"
       cd sim/src-tauri
       cargo build --release
       mkdir -p $SNAPCRAFT_PART_INSTALL/usr/local/bin
@@ -46,21 +40,12 @@ parts:
       # Copy the binary
       cp target/release/sim $SNAPCRAFT_PART_INSTALL/usr/local/bin/
 
-      # Create desktop entry
-      cat > $SNAPCRAFT_PART_INSTALL/usr/share/applications/sim-broadband-manager.desktop <<EOF
-      [Desktop Entry]
-      Type=Application
-      Name=SIM Broadband Manager
-      Comment=Monitor and manage broadband SIM modems
-      Exec=sim-broadband-manager
-      Icon=sim-broadband-manager
-      Categories=Utility;Network;
-      Terminal=false
-      EOF
+      # Copy desktop entry
+      cp sim-broadband-manager.desktop $SNAPCRAFT_PART_INSTALL/usr/share/applications/
 
       # Copy icon (using 128x128 as fallback for 512x512)
       cp icons/128x128.png \
-         $SNAPCRAFT_PART_INSTALL/usr/share/icons/hicolor/512x512/apps/sim-broadband-manager.png
+         $SNAPCRAFT_PART_INSTALL/usr/share/icons/hicolor/512x512/apps/com.github.psychopods.sim_broadband_manager.png
 
     build-packages:
       - build-essential
