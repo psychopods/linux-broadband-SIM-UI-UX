@@ -1,3 +1,5 @@
+%define debug_package %{nil}
+
 Name:           sim-broadband-manager
 Version:        %{?ver}%{!?ver:3.0.0}
 Release:        1%{?dist}

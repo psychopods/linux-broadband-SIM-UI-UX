@@ -1,12 +1,12 @@
 # SIM Voice Calling QA Run Sheet
 
 Project: linux-broadband-SIM-UI-UX  
-Build: ********\_\_\_\_********  
-Tester: ********\_\_\_\_********  
-Date: ********\_\_\_\_********  
-Target Laptop Model: ********\_\_\_\_********  
-Modem Model/Firmware: ********\_\_\_\_********  
-SIM Operator: ********\_\_\_\_********
+Build: **\*\*\*\***\_\_\_\_**\*\*\*\***  
+Tester: **\*\*\*\***\_\_\_\_**\*\*\*\***  
+Date: **\*\*\*\***\_\_\_\_**\*\*\*\***  
+Target Laptop Model: **\*\*\*\***\_\_\_\_**\*\*\*\***  
+Modem Model/Firmware: **\*\*\*\***\_\_\_\_**\*\*\*\***  
+SIM Operator: **\*\*\*\***\_\_\_\_**\*\*\*\***
 
 ## Environment Checks
 
@@ -18,8 +18,8 @@ SIM Operator: ********\_\_\_\_********
 
 Evidence:
 
-- mmcli -L: ********\_\_\_\_********
-- mmcli -m 0 (summary): ********\_\_\_\_********
+- mmcli -L: **\*\*\*\***\_\_\_\_**\*\*\*\***
+- mmcli -m 0 (summary): **\*\*\*\***\_\_\_\_**\*\*\*\***
 
 ---
 
